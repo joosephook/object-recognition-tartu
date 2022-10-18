@@ -101,6 +101,26 @@ if __name__ == '__main__':
     ]
     )
     dataset = TartuObjectDataset(transform=transform)
+    import matplotlib.pyplot as plt
+    labels = np.concatenate([l.numpy().reshape(1,-1) for l in dataset.labels], axis=0)
+
+    label_name = []
+    with open('labels.csv' , 'r') as f:
+        f.readline()
+        for line in f:
+            label_name.append(line.strip().split(',')[1])
+
+    plt.gcf().set_size_inches(10,20)
+    plt.barh(np.arange(92), labels.sum(axis=0))
+    plt.yticks(np.arange(92), label_name)
+
+    plt.show()
+
+    corr = np.corrcoef(labels, rowvar=False)
+    plt.matshow(corr)
+    print(corr)
+    plt.show()
+    exit(0)
 
     w = dataset.labels[0]
     for lbls in dataset.labels[1:]:
