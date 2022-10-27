@@ -9,7 +9,10 @@ import pandas as pd
 import os
 
 def img_exists(img_id):
-    return os.path.isfile(os.path.join('images', img_id))
+    exists = os.path.isfile(os.path.join('images', img_id))
+    if not exists:
+        print(img_id)
+    return exists
 
 def onehot(labels: str) -> np.ndarray:
     labels_int = list(map(int, labels.replace('l', '').split(' ')))
@@ -19,7 +22,6 @@ def onehot(labels: str) -> np.ndarray:
 
 def labelstring(onehot: np.ndarray) -> str:
     labels = np.array([f'l{i}' for i in range(92)])
-    print(onehot.shape)
     return ' '.join(labels[onehot[0]])
 
 
@@ -36,7 +38,8 @@ if __name__ == '__main__':
 
 
     # read in labels
-    labels = pd.read_csv('labels.csv')['object'].values.tolist()
+    labelsdf = pd.read_csv('labels.csv')
+    labels = labelsdf['object'].values.tolist()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = clip.load("ViT-B/32", device=device)
@@ -46,13 +49,18 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         logits_per_image, logits_per_text = model(images, texts)
+        img_embeddings = model.encode_image(images)
 
-    X = logits_per_image.cpu().numpy()
+    X = img_embeddings.cpu().numpy()
     y = np.array([
         onehot(lbl) for lbl in df['labels']
     ]).astype(int)
 
-    rf = RandomForestClassifier(n_estimators=111, max_features=None, random_state=345)
+
+    from sklearn.svm import SVC, OneClassSVM
+    from sklearn.multioutput import MultiOutputClassifier
+    from sklearn.linear_model import LogisticRegression, RidgeClassifierCV
+    rf = MultiOutputClassifier(LogisticRegression(class_weight='balanced'))
     rf.fit(X, y)
 
     testdf = pd.read_csv('test.csv')
@@ -69,18 +77,24 @@ if __name__ == '__main__':
             image = preprocess(img).unsqueeze(0).to(device)
             with torch.no_grad():
                 logits_per_image, logits_per_text = model(image, texts)
-            prediction = rf.predict(logits_per_image.cpu().numpy())
+                img_embeddings = model.encode_image(image)
+            x = img_embeddings.cpu().numpy()
+            prediction = rf.predict(x)
             # assert np.any(prediction > 0)
             predicted_labels = labelstring(prediction.astype(bool))
             if len(predicted_labels) == 0:
                 testlabels.append('l1')
             else:
                 testlabels.append(predicted_labels)
-            print(testlabels)
+            print('='*40)
+            print(img_id)
+            print(labelsdf.loc[labelsdf.label_id.isin(testlabels[-1].split(' ')), 'object'])
+            print('='*40)
         except FileNotFoundError:
+            print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/clip_random_forest_initial.csv', index=False)
+    testdf.to_csv('joosep_submissions/clip_logistic_regression_img_embeddings.csv', index=False)
 
 
 
