@@ -48,7 +48,9 @@ class CLIP:
         return img_embeddings.cpu().numpy()
 
 def open_img_id(img_id: str) -> ImageType:
-    return Image.open(os.path.join('images', img_id))
+    img = Image.open(os.path.join('images', img_id))
+    img.load()
+    return img
 
 if __name__ == '__main__':
     # read in images
