@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 import torch
 import clip
 from PIL import Image
+from PIL.Image import Image as ImageType
 
 import pandas as pd
 import os
@@ -25,41 +26,50 @@ def labelstring(onehot: np.ndarray) -> str:
     return ' '.join(labels[onehot[0]])
 
 
+class CLIP:
+    def __init__(self):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
+
+    def __call__(self, imgs: [ImageType], texts: [str]):
+        texts = clip.tokenize(texts).to(self.device)
+        images = torch.cat([self.preprocess(img).unsqueeze(0).to(self.device) for img in imgs], dim=0)
+        with torch.no_grad():
+            logits_per_image, logits_per_text = self.model(images, texts)
+        return logits_per_image.cpu().numpy()
+
+    def img_embeddings(self, imgs: [ImageType]):
+        if isinstance(imgs, ImageType):
+            imgs = [imgs]
+
+        images = torch.cat([self.preprocess(img).unsqueeze(0).to(self.device) for img in imgs], dim=0)
+        with torch.no_grad():
+            img_embeddings = self.model.encode_image(images)
+        return img_embeddings.cpu().numpy()
+
+def open_img_id(img_id: str) -> ImageType:
+    return Image.open(os.path.join('images', img_id))
+
 if __name__ == '__main__':
     # read in images
     df = pd.read_csv('train.csv')
     # throw away missing images
     df = df.loc[df.image_id.apply(img_exists)]
-    imgs = []
-    for img in df['image_id']:
-        img = Image.open(os.path.join('images', img))
-        img.load()
-        imgs.append(img)
-
+    df['Images'] = df['image_id'].apply(open_img_id)
 
     # read in labels
     labelsdf = pd.read_csv('labels.csv')
     labels = labelsdf['object'].values.tolist()
+    clip_model = CLIP()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = clip.load("ViT-B/32", device=device)
-    texts = clip.tokenize(labels).to(device)
-
-    images = torch.cat([preprocess(img).unsqueeze(0).to(device) for img in imgs], dim=0)
-
-    with torch.no_grad():
-        logits_per_image, logits_per_text = model(images, texts)
-        img_embeddings = model.encode_image(images)
-
-    X = img_embeddings.cpu().numpy()
+    img_embeddings = clip_model.img_embeddings(df['Images'])
+    X = img_embeddings
     y = np.array([
         onehot(lbl) for lbl in df['labels']
     ]).astype(int)
 
-
-    from sklearn.svm import SVC, OneClassSVM
     from sklearn.multioutput import MultiOutputClassifier
-    from sklearn.linear_model import LogisticRegression, RidgeClassifierCV
+    from sklearn.linear_model import LogisticRegression
     rf = MultiOutputClassifier(LogisticRegression(class_weight='balanced'))
     rf.fit(X, y)
 
@@ -73,15 +83,10 @@ if __name__ == '__main__':
 
     for img_id in testdf.image_id:
         try:
-            img = Image.open(os.path.join('images', img_id))
-            image = preprocess(img).unsqueeze(0).to(device)
-            with torch.no_grad():
-                logits_per_image, logits_per_text = model(image, texts)
-                img_embeddings = model.encode_image(image)
-            x = img_embeddings.cpu().numpy()
+            x = clip_model.img_embeddings(open_img_id(img_id))
             prediction = rf.predict(x)
-            # assert np.any(prediction > 0)
             predicted_labels = labelstring(prediction.astype(bool))
+
             if len(predicted_labels) == 0:
                 testlabels.append('l1')
             else:
