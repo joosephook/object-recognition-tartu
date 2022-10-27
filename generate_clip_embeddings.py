@@ -62,7 +62,7 @@ if __name__ == '__main__':
     rf.fit(X_train, y_train)
 
     test = np.load('clip_embeddings_test.npz', allow_pickle=True)
-    X_test = test
+    X_test = test['embeddings']
     test_img_ids = test['img_id']
 
     testdf = pd.read_csv('test.csv')
