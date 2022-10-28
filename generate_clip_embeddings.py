@@ -57,9 +57,15 @@ if __name__ == '__main__':
     
 
     from sklearn.multioutput import MultiOutputClassifier
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.svm import SVC
+    from sklearn.metrics import f1_score
     from sklearn.linear_model import LogisticRegression
-    rf = MultiOutputClassifier(LogisticRegression(class_weight='balanced', random_state=403895, solver='saga', penalty='elasticnet', l1_ratio=0.5))
+
+    rf = MultiOutputClassifier(SVC(C=2.0, class_weight='balanced', random_state=403895))
     rf.fit(X_train, y_train)
+    print(f'f1 score: {f1_score(y_train, rf.predict(X_train), average="macro"):.3f}')
+    print(rf.score(X_train, y_train))
 
     test = np.load('clip_embeddings_test.npz', allow_pickle=True)
     X_test = test['embeddings']
@@ -87,7 +93,7 @@ if __name__ == '__main__':
 
 
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/clip_logistic_regression.csv', index=False)
+    testdf.to_csv('joosep_submissions/clip_svc_classifier.csv', index=False)
     
     
     
