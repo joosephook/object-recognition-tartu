@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     from sklearn.multioutput import MultiOutputClassifier
     from sklearn.linear_model import LogisticRegression
-    rf = MultiOutputClassifier(LogisticRegression(dual=True, solver='liblinear', class_weight='balanced', random_state=2135))
+    rf = MultiOutputClassifier(LogisticRegression(dual=True, C=2.0, solver='liblinear', class_weight='balanced', max_iter=1000, random_state=2135))
     rf.fit(X, y)
 
     testdf = pd.read_csv('test.csv')
@@ -102,7 +102,7 @@ if __name__ == '__main__':
             print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/clip_logistic_regression_img_embeddings_dual_formulation.csv', index=False)
+    testdf.to_csv('joosep_submissions/clip_logistic_regression_img_embeddings_dual_formulation_C2.csv', index=False)
 
 
 
