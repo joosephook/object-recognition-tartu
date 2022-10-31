@@ -8,6 +8,17 @@ from PIL.Image import Image as ImageType
 
 import pandas as pd
 import os
+import torchvision.transforms.functional as fn
+
+
+class SquarePad:
+    def __call__(self, image):
+        w, h = image.size
+        max_wh = np.max([w, h])
+        hp = int((max_wh - w) / 2)
+        vp = int((max_wh - h) / 2)
+        padding = (hp, vp, hp, vp)
+        return fn.pad(image, padding, 0, 'constant')
 
 def img_exists(img_id):
     exists = os.path.isfile(os.path.join('images', img_id))
@@ -58,6 +69,9 @@ if __name__ == '__main__':
     # throw away missing images
     df = df.loc[df.image_id.apply(img_exists)]
     df['Images'] = df['image_id'].apply(open_img_id)
+    # pad all images to a square to not lose information
+    # square_pad = SquarePad()
+    # df['Images'] = df['Images'].apply(square_pad)
 
     # read in labels
     labelsdf = pd.read_csv('labels.csv')
@@ -72,7 +86,7 @@ if __name__ == '__main__':
 
     from sklearn.multioutput import MultiOutputClassifier
     from sklearn.linear_model import LogisticRegression
-    rf = MultiOutputClassifier(LogisticRegression(dual=True, C=2.0, solver='liblinear', class_weight='balanced', max_iter=1000, random_state=2135))
+    rf = MultiOutputClassifier(LogisticRegression(dual=True, C=1.0, solver='liblinear', class_weight='balanced', max_iter=1000, random_state=2135))
     rf.fit(X, y)
 
     testdf = pd.read_csv('test.csv')
@@ -102,7 +116,7 @@ if __name__ == '__main__':
             print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/clip_logistic_regression_img_embeddings_dual_formulation_C2.csv', index=False)
+    testdf.to_csv('joosep_submissions/clip_logistic_regression_img_embeddings_dual_formulation', index=False)
 
 
 
