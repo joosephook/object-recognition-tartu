@@ -1,0 +1,89 @@
+image_id,labels
+img102.jpg,l1
+img103.jpg,l1
+img11.jpg,l0
+img113.jpg,l1 l6
+img114.jpg,l0
+img121.jpg,l0 l1
+img126.jpg,l1
+img131.jpg,l0 l3
+img136.jpg,l1
+img137.jpg,l2 l14 l18 l21
+img139.jpg,l1 l2
+img140.jpg,l1
+img15.jpg,l1
+img150.jpg,l1
+img151.jpg,l1
+img152.jpg,l1
+img156.jpg,l1
+img161.jpg,l1 l2 l7
+img166.jpg,l1 l2 l14
+img167.jpg,l1
+img170.jpg,l1
+img173.jpg,l0
+img176.jpg,l1
+img18.jpg,l1
+img180.jpg,l1
+img181.jpg,l2
+img182.jpg,l0
+img183.jpg,l0 l1
+img189.jpg,l6 l34
+img192.jpg,l0
+img194.jpg,l1 l7
+img195.jpg,l3
+img206.jpg,l1
+img208.jpg,l1
+img209.jpg,l0 l1 l2
+img211.jpg,l0 l1
+img212.jpg,l1
+img218.jpg,l8 l30 l70 l78 l88
+img22.jpg,l1 l2 l15 l18 l21
+img221.jpg,l1
+img228.jpg,l1
+img230.jpg,l1
+img231.jpg,l1
+img234.jpg,l1
+img238.jpg,l1
+img243.jpg,l1
+img247.jpg,l1
+img248.jpg,l1
+img249.jpg,l1
+img250.jpg,l0
+img251.jpg,l1
+img252.jpg,l1
+img257.jpg,l0 l9
+img259.jpg,l1
+img262.jpg,l5
+img265.jpg,l1
+img266.jpg,l6
+img279.jpg,l0
+img280.jpg,l1
+img281.jpg,l0
+img285.jpg,l0
+img288.jpg,l0
+img292.jpg,l0 l1
+img296.jpg,l0 l28
+img3.jpg,l0 l3
+img300.jpg,l1
+img33.jpg,l1
+img37.jpg,l1
+img39.jpg,l1
+img41.jpg,l1
+img42.jpg,l1
+img43.jpg,l0 l5
+img48.jpg,l0
+img49.jpg,l0
+img5.jpg,l4
+img57.jpg,l1
+img59.jpg,l1
+img69.jpg,l0 l1
+img71.jpg,l0
+img73.jpg,l0
+img75.jpg,l13
+img79.jpg,l1
+img8.jpg,l0 l17
+img81.jpg,l1
+img84.jpg,l1
+img90.jpg,l1
+img93.jpg,l1
+img94.jpg,l0

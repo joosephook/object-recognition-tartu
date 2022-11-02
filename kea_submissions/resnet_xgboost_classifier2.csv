@@ -1,0 +1,89 @@
+image_id,labels
+img102.jpg,l0
+img103.jpg,l0 l1 l2 l9
+img11.jpg,l0 l28
+img113.jpg,l1 l3 l6
+img114.jpg,l42 l83 l86
+img121.jpg,l0 l1 l2 l3 l6 l10 l31
+img126.jpg,l0 l1 l2 l3 l6 l7 l9 l18 l90
+img131.jpg,l0 l2 l5
+img136.jpg,l4 l44 l66
+img137.jpg,l1 l3 l21 l73
+img139.jpg,l1 l2 l5 l29
+img140.jpg,l1 l90
+img15.jpg,l0 l1 l17
+img150.jpg,l0 l5
+img151.jpg,l2 l3 l5 l9
+img152.jpg,l0 l1 l2 l3 l13
+img156.jpg,l3 l16
+img161.jpg,l0 l1 l2 l5 l7 l9 l33 l59
+img166.jpg,l0 l1 l2 l7 l14 l34 l36 l61
+img167.jpg,l0 l6 l22 l43
+img170.jpg,l0 l3 l24
+img173.jpg,l0 l1 l4
+img176.jpg,l25 l29 l77 l78
+img18.jpg,l0 l1 l2 l7 l22
+img180.jpg,l1
+img181.jpg,l0 l2 l5 l13
+img182.jpg,l0 l1 l5 l56
+img183.jpg,l0 l1 l7
+img189.jpg,l0 l1 l3 l19 l27
+img192.jpg,l0 l5 l75
+img194.jpg,l1 l2 l5
+img195.jpg,l0 l3
+img206.jpg,l1 l2 l4 l12
+img208.jpg,l0 l1
+img209.jpg,l0 l1 l2 l6
+img211.jpg,l1 l25 l69
+img212.jpg,l0 l1 l5 l15
+img218.jpg,l8 l30 l70 l78 l88
+img22.jpg,l1 l2 l21 l71
+img221.jpg,l0 l1
+img228.jpg,l0 l1 l2 l9 l44
+img230.jpg,l1 l2 l16
+img231.jpg,l6
+img234.jpg,l0 l1 l27
+img238.jpg,l0 l4
+img243.jpg,l1 l8
+img247.jpg,l1 l5 l7 l43 l65
+img248.jpg,l50 l69
+img249.jpg,l1 l2 l3 l5
+img250.jpg,l0
+img251.jpg,l1 l29 l44
+img252.jpg,l39
+img257.jpg,l1 l2 l7 l9
+img259.jpg,l0 l5
+img262.jpg,l5 l8 l10 l60 l74
+img265.jpg,l77
+img266.jpg,l6 l19 l90 l91
+img279.jpg,l0 l1 l19 l80
+img280.jpg,l0 l1 l2 l7
+img281.jpg,l0 l1 l3 l26
+img285.jpg,l0
+img288.jpg,l0
+img292.jpg,l0 l1 l2 l5
+img296.jpg,l3 l24 l26 l28 l48 l81
+img3.jpg,l0 l3 l4 l27
+img300.jpg,l1
+img33.jpg,l0 l1 l2 l5 l6
+img37.jpg,l1 l59
+img39.jpg,l1 l4 l8 l53
+img41.jpg,l3 l7 l9 l52
+img42.jpg,l1 l26 l66 l75
+img43.jpg,l75
+img48.jpg,l0 l1 l3 l4 l7 l45
+img49.jpg,l6
+img5.jpg,l0 l4 l17 l22 l27 l58 l63 l81
+img57.jpg,l0 l1
+img59.jpg,l0 l7 l11 l43 l48 l67
+img69.jpg,l0 l1 l41 l55
+img71.jpg,l0 l66
+img73.jpg,l0 l28 l86
+img75.jpg,l0 l5 l44
+img79.jpg,l0 l75
+img8.jpg,l0 l3 l4 l17 l45 l79 l81 l90
+img81.jpg,l0 l13
+img84.jpg,l1 l26
+img90.jpg,l8 l62
+img93.jpg,l0 l42 l59 l83 l86
+img94.jpg,l0 l26 l54 l59 l75 l83 l86
