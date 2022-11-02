@@ -1,0 +1,89 @@
+image_id,labels
+img102.jpg,l0 l1 l3 l5 l24 l26 l39 l41
+img103.jpg,l0 l1 l2 l7 l30
+img11.jpg,l1 l4 l5 l17
+img113.jpg,l2 l10 l13 l32 l51
+img114.jpg,l7 l13 l17 l51
+img121.jpg,l0 l1 l2 l6 l19 l22 l31 l34 l43 l54
+img126.jpg,l0 l6 l43
+img131.jpg,l0 l19 l32 l44
+img136.jpg,l3 l44
+img137.jpg,l0 l1 l2 l4 l59
+img139.jpg,l1 l4 l18 l59
+img140.jpg,l1 l7 l19 l22 l43 l49 l54 l74
+img15.jpg,l1 l53 l91
+img150.jpg,l0 l3 l4 l7 l8 l14
+img151.jpg,l0 l5 l7 l9 l14
+img152.jpg,l3 l5 l7 l14
+img156.jpg,l1 l5 l7 l11 l14 l31
+img161.jpg,l0 l1 l6 l38 l40
+img166.jpg,l1 l2 l3 l8 l11 l12
+img167.jpg,l1 l3 l8 l9 l36 l54
+img170.jpg,l0 l1 l3 l21 l83
+img173.jpg,l1 l4
+img176.jpg,l0 l1 l4 l5 l85
+img18.jpg,l4 l10 l17
+img180.jpg,l0 l1 l5 l30
+img181.jpg,l1 l7 l8 l10 l11 l12
+img182.jpg,l0 l1 l3 l8 l22 l31 l74
+img183.jpg,l1 l2 l20
+img189.jpg,l0 l1 l6 l19 l20 l41
+img192.jpg,l1 l2 l3 l11 l12 l33
+img194.jpg,l0 l1 l2 l5 l31
+img195.jpg,l0 l2 l5 l9 l31 l33
+img206.jpg,l0 l1 l2 l5 l6 l12
+img208.jpg,l1 l2 l5 l13 l51
+img209.jpg,l0 l1 l2 l5 l12 l13
+img211.jpg,l1 l2 l5 l12 l15 l18 l24
+img212.jpg,l1 l2 l5 l7 l13 l15 l18 l43 l55
+img218.jpg,l8 l30 l70 l78 l88
+img22.jpg,l1 l2 l15 l18 l21 l71
+img221.jpg,l0 l24 l26 l28
+img228.jpg,l1 l3 l4 l17 l23 l42 l69
+img230.jpg,l1 l3 l4 l9 l16 l42 l69
+img231.jpg,l0 l1 l4 l9 l42
+img234.jpg,l1 l3 l4 l9 l42
+img238.jpg,l0 l3 l5 l8 l11 l12 l30
+img243.jpg,l0 l1 l2 l5 l6
+img247.jpg,l1 l2 l3
+img248.jpg,l7 l8 l21 l25 l29
+img249.jpg,l2 l25 l29
+img250.jpg,l5 l7 l16 l25 l29 l43 l55 l73
+img251.jpg,l1 l3 l5 l9 l11 l12 l25 l27 l29 l52
+img252.jpg,l1 l4 l11 l25 l29
+img257.jpg,l0 l2 l4 l13 l15 l21
+img259.jpg,l3 l8 l43
+img262.jpg,l8 l66 l88
+img265.jpg,l8 l89
+img266.jpg,l1 l3 l80
+img279.jpg,l0 l5 l6 l32 l38 l40
+img280.jpg,l0 l3 l4 l37
+img281.jpg,l0 l3 l4 l24 l26 l39 l87
+img285.jpg,l0
+img288.jpg,l0
+img292.jpg,l0 l1 l3 l30 l46
+img296.jpg,l6 l15 l24 l28 l48
+img3.jpg,l3 l4 l7 l9 l27 l81
+img300.jpg,l3 l5 l6 l28 l32 l48
+img33.jpg,l0 l2 l12 l56
+img37.jpg,l10 l21 l35 l64 l85
+img39.jpg,l3 l5 l18 l21 l35
+img41.jpg,l1 l3 l12 l15 l16 l27 l76
+img42.jpg,l3 l5 l14
+img43.jpg,l2 l3 l14
+img48.jpg,l0 l3 l7 l9 l16 l45 l67
+img49.jpg,l0 l1 l5 l12 l14
+img5.jpg,l0 l4 l17 l27 l58 l63 l79
+img57.jpg,l8 l34
+img59.jpg,l0 l1 l3 l7 l9 l14 l45 l67
+img69.jpg,l0 l1 l24 l26 l39 l41 l86
+img71.jpg,l11 l57
+img73.jpg,l0 l10 l57
+img75.jpg,l0 l3 l7 l41 l57 l86
+img79.jpg,l2 l21 l32
+img8.jpg,l3 l4 l17 l20
+img81.jpg,l2
+img84.jpg,l0 l13 l60 l75
+img90.jpg,l0 l11 l26 l62 l90
+img93.jpg,l2
+img94.jpg,l13 l21 l44 l66 l89
