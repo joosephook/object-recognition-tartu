@@ -102,9 +102,6 @@ if __name__ == '__main__':
     square_pad = SquarePad()
     # df['Images'] = df['Images'].apply(square_pad)
 
-    df2 = df.copy()
-    df2['Images'] = df['Images'].apply(fn.hflip)
-    df = pd.concat([df, df2])
 
     print(df.shape)
     print(df.shape)
@@ -113,16 +110,9 @@ if __name__ == '__main__':
     labelsdf = pd.read_csv('labels.csv')
     labels = labelsdf['object'].values.tolist()
     clip_model = CLIP()
-    resnet50 = resnet50_features()
 
     img_embeddings = clip_model.img_embeddings(df['Images'])
-    X = img_embeddings
-    # X_ = resnet50(df['Images'])
-    # X = np.hstack((X, X_))
-    # X = X_
-    # print(X_.shape)
-
-
+    X = (img_embeddings + clip_model.img_embeddings(df['Images'].apply(fn.hflip)))/2
 
     y = np.array([
         onehot(lbl) for lbl in df['labels']
@@ -130,14 +120,11 @@ if __name__ == '__main__':
 
     from sklearn.multioutput import MultiOutputClassifier, ClassifierChain
     from sklearn.linear_model import LogisticRegression
-    from sklearn.preprocessing import StandardScaler
+    from sklearn.preprocessing import MinMaxScaler
 
-    rf = ClassifierChain(LogisticRegression(dual=True, solver='liblinear', class_weight='balanced', random_state=3425))
-    sc = StandardScaler()
-    X = sc.fit_transform(X)
+    order = pd.read_csv('labels.csv')['order']
+    rf = ClassifierChain(LogisticRegression(dual=True, C=0.1, solver='liblinear', class_weight='balanced', random_state=3425), order=order)
     rf.fit(X, y)
-
-
 
     testdf = pd.read_csv('test.csv')
     testlabels = []
@@ -150,14 +137,9 @@ if __name__ == '__main__':
     for img_id in testdf.image_id:
         try:
             x1 = clip_model.img_embeddings(open_img_id(img_id))
-            # x1 = np.hstack((x1, resnet50([open_img_id(img_id)])))
-            x1 = sc.transform(x1)
             x3 = clip_model.img_embeddings(fn.hflip(open_img_id(img_id)))
-            # x3 = np.hstack((x3, resnet50([open_img_id(img_id)])))
-            x3 = sc.transform(x3)
-            prediction = rf.predict(x1) + rf.predict(x3)
+            prediction = rf.predict((x1+x3)/2)
             predicted_labels = labelstring(prediction.astype(bool))
-            # assert len(predicted_labels), img_id
 
             if len(predicted_labels) == 0:
                 testlabels.append('l1')
@@ -171,7 +153,7 @@ if __name__ == '__main__':
             print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/clip_logistic_dual_scaled_hflip.csv', index=False)
+    testdf.to_csv('joosep_submissions/clip_logistic_dual_scaled_hflip_merge_strong_reg.csv', index=False)
 
 
 
