@@ -120,10 +120,13 @@ if __name__ == '__main__':
 
     from sklearn.multioutput import MultiOutputClassifier, ClassifierChain
     from sklearn.linear_model import LogisticRegression
-    from sklearn.preprocessing import MinMaxScaler
+    from sklearn.preprocessing import StandardScaler
 
     order = pd.read_csv('labels.csv')['order']
+    sc = StandardScaler()
+    sc.fit(X)
     rf = ClassifierChain(LogisticRegression(dual=True, C=0.1, solver='liblinear', class_weight='balanced', random_state=3425), order=order)
+    X = sc.transform(X)
     rf.fit(X, y)
 
     testdf = pd.read_csv('test.csv')
@@ -138,7 +141,9 @@ if __name__ == '__main__':
         try:
             x1 = clip_model.img_embeddings(open_img_id(img_id))
             x3 = clip_model.img_embeddings(fn.hflip(open_img_id(img_id)))
-            prediction = rf.predict((x1+x3)/2)
+            x = (x1+x3)/2
+            x = sc.transform(x)
+            prediction = rf.predict(x)
             predicted_labels = labelstring(prediction.astype(bool))
 
             if len(predicted_labels) == 0:
@@ -153,7 +158,7 @@ if __name__ == '__main__':
             print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/clip_logistic_dual_scaled_hflip_merge_strong_reg.csv', index=False)
+    testdf.to_csv('joosep_submissions/clip_logistic_dual_scaled_hflip_merge_strong_reg_scaled.csv', index=False)
 
 
 
