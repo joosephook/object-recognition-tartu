@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 
 import torch
 import clip
@@ -9,7 +8,6 @@ from PIL.Image import Image as ImageType
 import pandas as pd
 import os
 import torchvision.transforms.functional as fn
-from sklearn.svm import SVC
 
 
 class SquarePad:
@@ -125,6 +123,7 @@ def hue_vector(imgs):
         vector.append(counts/counts.sum())
     return np.array(vector)
 
+
 if __name__ == '__main__':
     # read in images
     df = pd.read_csv('train.csv')
@@ -152,7 +151,6 @@ if __name__ == '__main__':
     clip_model = CLIP()
 
     X = clip_model.img_embeddings(df['Images'])
-    X = np.hstack((X, hue_vector(df['Images'])))
 
     y = np.array([
         onehot(lbl) for lbl in df['labels']
@@ -165,25 +163,28 @@ if __name__ == '__main__':
         onehot(lbl) for lbl in val_df['labels']
     ]).astype(int)
 
-    from sklearn.multioutput import MultiOutputClassifier, ClassifierChain
-    from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import StandardScaler
-    from sklearn.metrics import f1_score
     from sklearn.metrics import f1_score
     from sklearn.model_selection import GridSearchCV
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler, MinMaxScaler
+    from ml_xgboost import MultiLabelXGBClassifier
     pipe = Pipeline(
         [
             ('sc', StandardScaler()),
-            ('model',
-           ClassifierChain(LogisticRegression(dual=True, solver="liblinear", random_state=3425, class_weight='balanced', max_iter=400))
-           )])
+            ('model', MultiLabelXGBClassifier())
+        ])
 
     grid = GridSearchCV(
         pipe,
         param_grid={
-            'model__base_estimator__C':[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+            # 'model__lambda':[0.1, 0.5, 1.0],
+            # 'model__alpha':[0.1, 0.5, 1.0],
+            'model__sampling_method': ['gradient_based', 'uniform'],
+            'model__max_delta_step': [0, 1, 2, 5, 8, 10],
+            'model__max_depth': [3, 6, 9, 12],
+            'model__grow_policy': ['depthwise', 'lossguide'],
+            'model__objective':['binary:logistic'],
         },
         cv=[(train_idx, val_idx)],
         scoring='f1_macro',
@@ -205,7 +206,6 @@ if __name__ == '__main__':
     for img_id in testdf.image_id:
         try:
             x = clip_model.img_embeddings(open_img_id(img_id))
-            x = np.hstack((x, hue_vector([open_img_id(img_id)])))
             prediction = model.predict(x)
             predicted_labels = labelstring(prediction.astype(bool))
 
@@ -221,7 +221,7 @@ if __name__ == '__main__':
             print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/logistic_regression_hue.csv', index=False)
+    testdf.to_csv('joosep_submissions/mlxgboost_experiment1.csv', index=False)
 
 
 
