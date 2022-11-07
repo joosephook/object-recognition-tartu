@@ -114,6 +114,7 @@ def set_cover(universe, subsets):
 
     return used_subsets
 
+
 def hue_vector(imgs):
 
     vector = []
@@ -171,20 +172,26 @@ if __name__ == '__main__':
     from ml_xgboost import MultiLabelXGBClassifier
     pipe = Pipeline(
         [
-            ('sc', StandardScaler()),
+            # ('sc', StandardScaler()),
             ('model', MultiLabelXGBClassifier())
         ])
 
     grid = GridSearchCV(
         pipe,
         param_grid={
-            # 'model__lambda':[0.1, 0.5, 1.0],
-            # 'model__alpha':[0.1, 0.5, 1.0],
-            'model__sampling_method': ['gradient_based', 'uniform'],
-            'model__max_delta_step': [0, 1, 2, 5, 8, 10],
-            'model__max_depth': [3, 6, 9, 12],
-            'model__grow_policy': ['depthwise', 'lossguide'],
+            'model__booster':['gblinear'],
+            'model__lambda':[2.0],
+            'model__updater':['coord_descent'],
+            'model__feature_selector':['greedy', 'thrifty'],
+            'model__seed':[3214345],
+            # 'model__tree_method':['exact'],
+            # 'model__alpha':[0, 0.5, 1.0],
+            # 'model__sampling_method': ['gradient_based', 'uniform'],
+            # 'model__max_delta_step': [0, 1, 2, 5, 10],
+            # 'model__max_depth': [1, 2, 3],
+            # 'model__grow_policy': ['depthwise', 'lossguide'],
             'model__objective':['binary:logistic'],
+            'model__eval_metric':['auc'],
         },
         cv=[(train_idx, val_idx)],
         scoring='f1_macro',
