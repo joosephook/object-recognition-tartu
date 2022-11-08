@@ -33,6 +33,20 @@ class MultiLabelXGBClassifier(BaseEstimator, ClassifierMixin):
         # Return the classifier
         return self
 
+
+    def predict_proba(self, X):
+        check_is_fitted(self)
+
+        # Input validation
+        X = check_array(X)
+
+        pred = [ ]
+        for m in self.models:
+            y_pred = m.predict_proba(X)[:, 1]
+            pred.append(y_pred.reshape(-1,1))
+        pred = np.hstack(pred)
+        return pred
+
     def predict(self, X):
         # Check if fit has been called
         check_is_fitted(self)
