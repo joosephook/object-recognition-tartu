@@ -26,8 +26,6 @@ class SquarePad:
 
 def img_exists(img_id):
     exists = os.path.isfile(os.path.join('images', img_id))
-    if not exists:
-        print(img_id)
     return exists
 
 def onehot(labels: str) -> np.ndarray:
@@ -139,14 +137,11 @@ if __name__ == '__main__':
 
     df['Images'] = df['image_id'].apply(open_img_id)
 
-    subsets = [
-        set(np.arange(92)[onehot(lbl).astype(bool)])
-        for lbl in df['labels']
-    ]
-    # subsets_used = set_cover(set(range(92)), subsets)
-
-
-    def generate_splits(n, subsets):
+    def generate_splits(n):
+        subsets = [
+            set(np.arange(92)[onehot(lbl).astype(bool)])
+            for lbl in df['labels']
+        ]
         from itertools import permutations
 
         subsets_used = []
@@ -165,10 +160,7 @@ if __name__ == '__main__':
 
         return splits
 
-    cv = generate_splits(10, subsets)
-    print(len(cv))
-
-
+    cv = generate_splits(10)
 
     # read in labels
     labelsdf = pd.read_csv('labels.csv')
@@ -263,15 +255,20 @@ if __name__ == '__main__':
                 testlabels.append('l1')
             else:
                 testlabels.append(predicted_labels)
-            print('='*40)
-            print(img_id)
-            print(labelsdf.loc[labelsdf.label_id.isin(testlabels[-1].split(' ')), 'object'])
-            print('='*40)
+            print(img_id, ' '.join(labelsdf.loc[labelsdf.label_id.isin(testlabels[-1].split(' ')), 'object'].values.ravel()), sep='\t')
         except FileNotFoundError:
-            print(img_id)
+            print(img_id, 'missing, defaulting to l0')
             testlabels.append('l0')
+
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/knn.csv', index=False)
+    import time
+    timestamp = int(time.time())
+    import os
+    import shutil
+    outdir = f'joosep_submissions/{timestamp}'
+    os.mkdir(outdir)
+    testdf.to_csv(os.path.join(outdir, 'test.csv'), index=False)
+    shutil.copy(__file__, outdir)
     print(grid.best_score_, grid.best_params_)
 
 
