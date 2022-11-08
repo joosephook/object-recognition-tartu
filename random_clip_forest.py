@@ -128,6 +128,7 @@ def hue_vector(imgs):
     return np.array(vector)
 
 
+
 if __name__ == '__main__':
     # read in images
     df = pd.read_csv('train.csv')
@@ -141,13 +142,32 @@ if __name__ == '__main__':
         set(np.arange(92)[onehot(lbl).astype(bool)])
         for lbl in df['labels']
     ]
-    subsets_used = set_cover(set(range(92)), subsets)
+    # subsets_used = set_cover(set(range(92)), subsets)
 
-    val = df.index.isin(subsets_used)
-    train = ~val
 
-    train_idx = df.index[train]
-    val_idx   = df.index[val]
+    def generate_splits(n, subsets):
+        from itertools import permutations
+
+        subsets_used = []
+        splits = []
+        for p, _ in zip(permutations(subsets), range(n)):
+            subsets = set_cover(set(range(92)), p)
+
+            val = df.index.isin(subsets)
+            train = ~val
+
+            train_idx = df.index[train]
+            val_idx   = df.index[val]
+            if subsets not in subsets_used:
+                subsets_used.append(subsets_used)
+                splits.append((train_idx, val_idx))
+
+        return splits
+
+    cv = generate_splits(10, subsets)
+    print(len(cv))
+
+
 
     # read in labels
     labelsdf = pd.read_csv('labels.csv')
@@ -162,8 +182,8 @@ if __name__ == '__main__':
         #         clip_model.img_embeddings(imgs)
         #      )
         # )
-        return clip_model(imgs, details)
-        # return clip_model.img_embeddings(imgs)
+        # return clip_model(imgs, details)
+        return clip_model.img_embeddings(imgs)
     X = features(df['Images'])
 
     y = np.array([
@@ -191,29 +211,25 @@ if __name__ == '__main__':
             ('sc', StandardScaler()),
             # ('pca', PCA(n_components=128, whiten=True)),
             # ('kbest', SelectKBest(k=512)),
-            ('model', MultiLabelXGBClassifier())
-            # ('model', ClassifierChain(LogisticRegression(dual=True, solver="liblinear", random_state=342985)))
+            # ('model', MultiLabelXGBClassifier())
+            ('model', ClassifierChain(LogisticRegression(dual=True, solver='liblinear', fit_intercept=True, random_state=342985, class_weight='balanced')))
         ])
 
     grid = GridSearchCV(
         pipe,
         param_grid={
-            # 'model__base_estimator__C':[0.1, 0.5, 1.0],
-            'model__n_estimators':[50],
-            'model__booster':['gbtree'],
+            'model__base_estimator__C':[0.1, 0.5, 0.8, 1.0],
+            'model__base_estimator__penalty': ['l2'],
+
+            # 'model__n_estimators':[50],
             # 'model__booster':['gbtree'],
-            'model__eta':[0.1, 0.3, 0.5],
-            'model__lambda':[1.0, 2.0, 4.0],
-            'model__alpha':[1.0, 2.0, 4.0],
-            # 'model__scale_pos_weight':[5],
-            # 'model__sampling_method': ['gradient_based', 'uniform'],
-            'model__max_delta_step': [1, 2, 4, 5,10],
-            # 'model__max_depth': [3, 6],
-            # 'model__grow_policy': ['depthwise', 'lossguide'],
-            'model__objective':['binary:logistic'],
-            # 'model__eval_metric':['auc'],
+            # 'model__eta':[0.1, 0.3, 0.5],
+            # 'model__lambda':[1.0, 2.0, 4.0],
+            # 'model__alpha':[1.0, 2.0, 4.0],
+            # 'model__max_delta_step': [1, 2, 4, 5,10],
+            # 'model__objective':['binary:logistic'],
         },
-        cv=[(train_idx, val_idx)],
+        cv=cv,
         # scoring='f1_macro',
         scoring='f1_samples',
         # scoring='roc_auc_ovr_weighted',
@@ -250,7 +266,7 @@ if __name__ == '__main__':
             print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/mlxgboost_experiment4.csv', index=False)
+    testdf.to_csv('joosep_submissions/logistic_cv10.csv', index=False)
     print(grid.best_score_, grid.best_params_)
 
 
