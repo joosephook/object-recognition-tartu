@@ -12,6 +12,7 @@ from sklearn.decomposition import PCA
 from sklearn.feature_selection import SelectKBest
 from sklearn.linear_model import LogisticRegression
 from sklearn.multioutput import ClassifierChain
+from sklearn.neighbors import KNeighborsClassifier
 
 
 class SquarePad:
@@ -212,14 +213,18 @@ if __name__ == '__main__':
             # ('pca', PCA(n_components=128, whiten=True)),
             # ('kbest', SelectKBest(k=512)),
             # ('model', MultiLabelXGBClassifier())
-            ('model', ClassifierChain(LogisticRegression(dual=True, solver='liblinear', fit_intercept=True, random_state=342985, class_weight='balanced')))
+            # ('model', ClassifierChain(LogisticRegression(dual=True, solver='liblinear', fit_intercept=True, random_state=342985, class_weight='balanced')))
+            ('model', ClassifierChain(KNeighborsClassifier(n_neighbors=3, algorithm='brute')))
         ])
 
     grid = GridSearchCV(
         pipe,
         param_grid={
-            'model__base_estimator__C':[0.1, 0.5, 0.8, 1.0],
-            'model__base_estimator__penalty': ['l2'],
+            # 'model__base_estimator__C':[0.1, 0.5, 0.8, 1.0],
+            # 'model__base_estimator__penalty': ['l2'],
+
+            'model__base_estimator__metric': ['euclidean', 'cosine'],
+            'model__base_estimator__weights': ['distance'],
 
             # 'model__n_estimators':[50],
             # 'model__booster':['gbtree'],
@@ -266,7 +271,7 @@ if __name__ == '__main__':
             print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/logistic_cv10.csv', index=False)
+    testdf.to_csv('joosep_submissions/knn.csv', index=False)
     print(grid.best_score_, grid.best_params_)
 
 
