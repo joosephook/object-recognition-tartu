@@ -8,6 +8,10 @@ from PIL.Image import Image as ImageType
 import pandas as pd
 import os
 import torchvision.transforms.functional as fn
+from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest
+from sklearn.linear_model import LogisticRegression
+from sklearn.multioutput import ClassifierChain
 
 
 class SquarePad:
@@ -149,8 +153,18 @@ if __name__ == '__main__':
     labelsdf = pd.read_csv('labels.csv')
     labels = labelsdf['object'].values.tolist()
     clip_model = CLIP()
+    details = pd.read_csv('labels_detailed.csv')['object']
 
-    X = clip_model.img_embeddings(df['Images'])
+    def features(imgs):
+        # return np.hstack(
+        #     (
+        #         clip_model(imgs, details),
+        #         clip_model.img_embeddings(imgs)
+        #      )
+        # )
+        return clip_model(imgs, details)
+        # return clip_model.img_embeddings(imgs)
+    X = features(df['Images'])
 
     y = np.array([
         onehot(lbl) for lbl in df['labels']
@@ -158,7 +172,10 @@ if __name__ == '__main__':
 
     val_df = pd.read_csv('val_clean.csv')
     val_df['Images'] = val_df['image_id'].apply(open_img_id)
-    val_X = clip_model.img_embeddings(val_df['Images'])
+    # val_X = clip_model.img_embeddings(val_df['Images'])
+    # val_X = rn50(val_df['Images'])
+    val_X = features(df['Images'])
+
     val_y = np.array([
         onehot(lbl) for lbl in val_df['labels']
     ]).astype(int)
@@ -172,26 +189,37 @@ if __name__ == '__main__':
     pipe = Pipeline(
         [
             ('sc', StandardScaler()),
+            # ('pca', PCA(n_components=128, whiten=True)),
+            # ('kbest', SelectKBest(k=512)),
             ('model', MultiLabelXGBClassifier())
+            # ('model', ClassifierChain(LogisticRegression(dual=True, solver="liblinear", random_state=342985)))
         ])
 
     grid = GridSearchCV(
         pipe,
         param_grid={
-            # 'model__lambda':[0.1, 0.5, 1.0],
-            # 'model__alpha':[0.1, 0.5, 1.0],
-            'model__sampling_method': ['gradient_based', 'uniform'],
-            'model__max_delta_step': [0, 1, 2, 5, 8, 10],
-            'model__max_depth': [3, 6, 9, 12],
-            'model__grow_policy': ['depthwise', 'lossguide'],
+            # 'model__base_estimator__C':[0.1, 0.5, 1.0],
+            'model__n_estimators':[50],
+            'model__booster':['gbtree'],
+            # 'model__booster':['gbtree'],
+            'model__eta':[0.1, 0.3, 0.5],
+            'model__lambda':[1.0, 2.0, 4.0],
+            'model__alpha':[1.0, 2.0, 4.0],
+            # 'model__scale_pos_weight':[5],
+            # 'model__sampling_method': ['gradient_based', 'uniform'],
+            'model__max_delta_step': [1, 2, 4, 5,10],
+            # 'model__max_depth': [3, 6],
+            # 'model__grow_policy': ['depthwise', 'lossguide'],
             'model__objective':['binary:logistic'],
+            # 'model__eval_metric':['auc'],
         },
         cv=[(train_idx, val_idx)],
-        scoring='f1_macro',
+        # scoring='f1_macro',
+        scoring='f1_samples',
+        # scoring='roc_auc_ovr_weighted',
         refit=True
     )
     grid.fit(X, y)
-    print(grid.best_score_, grid.best_params_)
 
     model = grid.best_estimator_
 
@@ -205,7 +233,8 @@ if __name__ == '__main__':
 
     for img_id in testdf.image_id:
         try:
-            x = clip_model.img_embeddings(open_img_id(img_id))
+            # x = clip_model.img_embeddings(open_img_id(img_id))
+            x = features([open_img_id(img_id)])
             prediction = model.predict(x)
             predicted_labels = labelstring(prediction.astype(bool))
 
@@ -221,7 +250,8 @@ if __name__ == '__main__':
             print(img_id)
             testlabels.append('l0')
     testdf['labels'] = testlabels
-    testdf.to_csv('joosep_submissions/mlxgboost_experiment1.csv', index=False)
+    testdf.to_csv('joosep_submissions/mlxgboost_experiment4.csv', index=False)
+    print(grid.best_score_, grid.best_params_)
 
 
 
