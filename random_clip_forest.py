@@ -1,4 +1,5 @@
 import numpy as np
+import sklearn.feature_selection
 
 import torch
 import clip
@@ -12,9 +13,10 @@ from sklearn.decomposition import PCA
 from sklearn.feature_selection import SelectKBest
 from sklearn.linear_model import LogisticRegression
 from sklearn.multioutput import ClassifierChain
-from sklearn.naive_bayes import GaussianNB, ComplementNB
+from sklearn.naive_bayes import GaussianNB, ComplementNB, BernoulliNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 
 class SquarePad:
@@ -133,8 +135,10 @@ def hue_vector(imgs):
     return np.array(vector)
 
 
+clip_model = CLIP()
+
+
 def features(imgs):
-    clip_model = CLIP()
     details = pd.read_csv('labels_detailed.csv')['object']
     # return np.hstack(
     #     (
@@ -142,8 +146,9 @@ def features(imgs):
     #         clip_model.img_embeddings(imgs)
     #      )
     # )
-    return clip_model(imgs, details)
-    # return clip_model.img_embeddings(imgs)
+    # return clip_model(imgs, details)
+    return clip_model.img_embeddings(imgs)
+    # return (clip_model.img_embeddings(imgs) > 0).astype(int)
 
 
 def generate_split(df):
@@ -207,7 +212,9 @@ if __name__ == '__main__':
     df['Images'] = df['image_id'].apply(open_img_id)
 
     X = features(df['Images'])
+    X = np.vstack((X, features(df['Images'].apply(fn.hflip))))
     y = np.vstack(df['labels'].apply(onehot).values)
+    y = np.vstack((y, y))
 
     from sklearn.preprocessing import StandardScaler
     from sklearn.metrics import f1_score
@@ -215,26 +222,28 @@ if __name__ == '__main__':
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler, MinMaxScaler
     from sklearn.ensemble import StackingClassifier, RandomForestClassifier, VotingClassifier
+    from sklearn.neural_network import MLPClassifier
     from ml_xgboost import MultiLabelXGBClassifier
 
     mdl  = ClassifierChain(
-                VotingClassifier(
-                    estimators=[
-                        ('logdual',
-                         LogisticRegression(dual=True, solver='liblinear', random_state=342985,
-                                            class_weight='balanced')),
-                        ('knn', KNeighborsClassifier(n_neighbors=3, metric='cosine')),
-                        ('svc', SVC(class_weight='balanced', random_state=23845)),
-                        ('log', LogisticRegression(random_state=342985, class_weight='balanced')),
-                    ],
-                )
-            )
+        VotingClassifier(
+            estimators=[
+                # ('logdual', LogisticRegression(C=0.8, dual=True, solver='liblinear', random_state=342985, class_weight='balanced')),
+                # ('knn', KNeighborsClassifier(n_neighbors=2, metric='cosine')),
+                # ('svc', SVC(class_weight='balanced', random_state=23845)),
+                # ('log', LogisticRegression(random_state=342985, class_weight='balanced')),
+            ],
+        )
+    )
 
     pipe = Pipeline(
         [
-            ('sc', MinMaxScaler()),
-            # ('model', MultiLabelXGBClassifier())
-            ('model', mdl),
+            # ('sc', MinMaxScaler()),
+            # ('model', MultiLabelXGBClassifier()),
+            # ('model', MLPClassifier(hidden_layer_sizes=(92,92), solver="lbfgs", alpha=1e-3,learning_rate_init=1e-2)),
+            # ('model', KNeighborsClassifier(n_neighbors=3, metric='cosine')),
+            ('model', ClassifierChain(LogisticRegression(dual=True, solver='liblinear', random_state=32, class_weight='balanced')))
+            # ('model', mdl),
         ]
     )
 
@@ -243,19 +252,8 @@ if __name__ == '__main__':
     grid = GridSearchCV(
         pipe,
         param_grid={
-            # 'model__base_estimator__C':[0.1, 0.5, 0.8, 1.0],
-            # 'model__base_estimator__penalty': ['l2'],
-
-            # 'model__base_estimator__metric': ['euclidean', 'cosine'],
-            # 'model__base_estimator__weights': ['distance'],
-
-            # 'model__n_estimators':[50],
-            # 'model__booster':['gbtree'],
-            # 'model__eta':[0.1, 0.3, 0.5],
-            # 'model__lambda':[1.0, 2.0, 4.0],
-            # 'model__alpha':[1.0, 2.0, 4.0],
-            # 'model__max_delta_step': [1, 2, 4, 5,10],
-            # 'model__objective':['binary:logistic'],
+            'model__base_estimator__C':[0.8, 1.0],
+            'model__base_estimator__penalty': ['l2'],
         },
         cv=cv,
         # scoring='f1_macro',
