@@ -17,6 +17,7 @@ class MultiLabelXGBClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y):
         self.classes_ = unique_labels(y)
+        predictions = []
 
         for i in range(y.shape[1]):
             model = xgb.XGBClassifier()
@@ -25,7 +26,9 @@ class MultiLabelXGBClassifier(BaseEstimator, ClassifierMixin):
             pos_weight = (y_.shape[0]-y_.sum())/y_.sum()
             params['scale_pos_weight'] = pos_weight
             model.set_params(**params)
-            model.fit(X, y_)
+            X_ = np.hstack((X, *predictions))
+            model.fit(X_, y_)
+            predictions.append(model.predict(X_).reshape(-1,1))
             self.models.append(model)
 
         self.X_ = X
@@ -54,9 +57,11 @@ class MultiLabelXGBClassifier(BaseEstimator, ClassifierMixin):
         # Input validation
         X = check_array(X)
 
+        predictions = []
         pred = [ ]
         for m in self.models:
-            y_pred = m.predict(X)
+            y_pred = m.predict(np.hstack((X, *pred)))
+            # y_pred = m.predict(X)
             pred.append(y_pred.reshape(-1,1))
         pred = np.hstack(pred)
         return pred
