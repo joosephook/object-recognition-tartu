@@ -6,7 +6,7 @@ from sklearn.multioutput import ClassifierChain
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
-from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring
+from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring, BEIT
 
 from sklearn.preprocessing import StandardScaler
 
@@ -24,9 +24,17 @@ if __name__ == '__main__':
     import random
     torch.manual_seed(123)
     random.seed(123)
-    from torchvision.transforms import AutoAugment
-    augmenter = AutoAugment()
-    features = DEIT()
+    import torchvision.transforms as T
+    import torchvision.transforms.functional as fn
+    transforms = [
+        fn.hflip,
+        T.GaussianBlur(3),
+        T.RandomAffine(10, shear=10)
+    ]
+    features = BEIT()
+
+    from xgboost import XGBClassifier
+
 
     for i in range(92):
         negative = df.iloc[df.index[y[:, i] == 0]]
@@ -35,9 +43,9 @@ if __name__ == '__main__':
         iterations = diff // len(positive) + 1
         new_positives = []
 
-        for _ in range(iterations):
+        for t in transforms:
             new_pos = positive.copy()
-            new_pos['Images'] = new_pos['Images'].apply(augmenter)
+            new_pos['Images'] = new_pos['Images'].apply(t)
             new_positives.append(new_pos)
 
         augmented = pd.concat([
@@ -46,9 +54,9 @@ if __name__ == '__main__':
             *new_positives
         ])
 
-        Xs = features(augmented['Images'])
+        Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
-        model = LogisticRegression(random_state=1234)
+        model = LogisticRegression(dual=True, solver='liblinear', max_iter=400, class_weight='balanced', random_state=1234)
         model.fit(Xs, ys[:,i])
         models.append(model)
 
