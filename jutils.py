@@ -143,7 +143,11 @@ def generate_split(df):
     yval = y_oh[val_idx]
     ytrain = y_oh[train_idx]
 
-    assert np.all(yval.sum(axis=0) > 0) and np.all(ytrain.sum(axis=0) > 0)
+    val_count = yval.sum(axis=0)
+    train_count = ytrain.sum(axis=0)
+
+
+    assert np.all(val_count > 0) and np.all(train_count > 0)
 
     return [(train_idx, val_idx)]
 
@@ -188,3 +192,13 @@ def train_enhance(dataframe):
         df2['Images'] = df2['Images'].apply(t)
         dataframe = pd.concat((dataframe, df2), axis=0)
     return dataframe
+
+class SquarePad:
+    def __call__(self, image):
+        w, h = image.size
+        max_wh = np.max([w, h])
+        hp = int((max_wh - w) / 2)
+        vp = int((max_wh - h) / 2)
+        padding = (hp, vp, hp, vp)
+        return FT.pad(image, padding, 0, 'constant')
+
