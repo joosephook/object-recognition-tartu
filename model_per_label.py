@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 if __name__ == '__main__':
     padder  = SquarePad()
     # read in images
-    df = pd.read_csv('train.csv')
+    df = pd.read_csv('train_Kea.csv')
     # throw away missing images
     df = df.loc[df.image_id.apply(img_exists)].reset_index()
     df['Images'] = df['image_id'].apply(open_img_id).apply(padder)
@@ -25,25 +25,19 @@ if __name__ == '__main__':
 
     models = []
 
-    from sklearn.linear_model import RidgeClassifier
     from sklearn.pipeline import Pipeline
     import torch
     import random
     torch.manual_seed(123)
     random.seed(123)
-    augmenter = AutoAugment(policy=AutoAugmentPolicy.CIFAR10)
     import torchvision.transforms as T
     import torchvision.transforms.functional as fn
     transforms = [
         fn.hflip,
         T.Compose([T.GaussianBlur(9)]),
         T.Compose([fn.hflip, T.GaussianBlur(9)]),
-        T.Compose([fn.hflip, T.RandomAdjustSharpness(0.1, p=1)]),
     ]
-    features = HOG()
-
-    cv = generate_split(df)
-    train, val = cv[0]
+    features = CLIP()
 
     scores = []
     for i in range(92):
@@ -54,7 +48,6 @@ if __name__ == '__main__':
         new_positives = []
 
         for t in transforms:
-        # for _ in range(iterations):
             new_pos = positive.copy()
             new_pos['Images'] = new_pos['Images'].apply(t)
             new_positives.append(new_pos)
@@ -65,13 +58,6 @@ if __name__ == '__main__':
             *new_positives
         ])
 
-        train = augmented.index.isin(cv[0][0])
-        val = augmented.index.isin(cv[0][1])
-        augmented.reset_index(inplace=True)
-        train_idx = augmented.index[train]
-        val_idx = augmented.index[val]
-        cv = [(train_idx, val_idx)]
-
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
         model = LogisticRegression(solver='saga', max_iter=400, class_weight='balanced', random_state=1234)
@@ -81,20 +67,9 @@ if __name__ == '__main__':
             ('model', model)
 
         ])
-        grid = GridSearchCV(
-            model,
-            param_grid={
-                # 'C':[0.7, 0.8, 0.9, 1.0],
-                # 'penalty': ['l2', 'l1'],
-            },
-            cv=cv,
-            scoring='f1',
-            refit=True
-        )
-        grid.fit(Xs, ys[:,i])
-        models.append(grid.best_estimator_)
-        scores.append(grid.best_score_)
-        print(grid.best_score_)
+        pipe.fit(Xs, ys[:,i])
+        models.append(pipe)
+        scores.append(pipe)
 
     testdf = pd.read_csv('test.csv')
     testlabels = []
@@ -132,21 +107,3 @@ if __name__ == '__main__':
     os.mkdir(outdir)
     testdf.to_csv(os.path.join(outdir, f'{timestamp}_test.csv'), index=False)
     shutil.copy(__file__, outdir)
-    import matplotlib.pyplot as plt
-
-    label_name = []
-    with open('labels.csv', 'r') as f:
-        f.readline()
-        for line in f:
-            label_name.append(line.strip().split(',')[1])
-
-    zero_fscores = (np.asarray(scores) == 0).sum()
-    plt.gcf().set_size_inches(10, 20)
-    plt.barh(np.arange(92), scores)
-    plt.yticks(np.arange(92), label_name);
-    plt.title(str(grid.best_estimator_) + f'\nnumber of zero F-scores: {zero_fscores}')
-    plt.show()
-
-
-
-
