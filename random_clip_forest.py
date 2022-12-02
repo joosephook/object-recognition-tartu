@@ -174,13 +174,13 @@ def generate_split(df):
     return [(train_idx, val_idx)]
 
 
-def label_test_set(m):
+def label_test_set(m, features):
     testdf = pd.read_csv('test.csv')
     testlabels = []
     labelsdf = pd.read_csv('labels.csv')
     for img_id in testdf.image_id:
         try:
-            x = features([open_img_id(img_id)])
+            x = features([padder(open_img_id(img_id))])
             prediction = m.predict(x)
             predicted_labels = labelstring(prediction.astype(bool))
 
@@ -221,7 +221,10 @@ if __name__ == '__main__':
     df = pd.read_csv('train.csv')
     # throw away missing images
     df = df.loc[df.image_id.apply(img_exists)].reset_index()
-    df['Images'] = df['image_id'].apply(open_img_id)
+    padder = SquarePad()
+    df['Images'] = df['image_id'].apply(open_img_id).apply(padder)
+    from jutils import HOG
+    features = HOG()
 
     cv = generate_split(df)
 
@@ -258,15 +261,17 @@ if __name__ == '__main__':
             ],
         )
     )
+    from sklearn.linear_model import RidgeClassifier
 
     pipe = Pipeline(
         [
             ('sc', StandardScaler()),
             # ('model', MultiLabelXGBClassifier()),
             # ('model', MLPClassifier(hidden_layer_sizes=(92,92), solver="lbfgs", alpha=1e-3,learning_rate_init=1e-2)),
-            ('model', KNeighborsClassifier(n_neighbors=5, metric='euclidean')),
+            # ('model', RidgeClassifier(alpha=0.5, class_weight='balanced', random_state=2134214)),
+            # ('model', KNeighborsClassifier(n_neighbors=5, metric='euclidean')),
             # ('knn', KNeighborsClassifier(n_neighbors=2, metric='cosine')),
-            # ('model', ClassifierChain(LogisticRegression(solver="liblinear", random_state=32, class_weight='balanced')))
+            ('model', ClassifierChain(LogisticRegression(dual=True, solver="liblinear", random_state=32, class_weight='balanced')))
             # ('model', mdl),
         ]
     )
@@ -294,6 +299,6 @@ if __name__ == '__main__':
     grid.fit(X, y)
 
     model = grid.best_estimator_
-    label_test_set(model)
+    label_test_set(model, features)
 
     print(grid.best_score_, grid.best_params_)

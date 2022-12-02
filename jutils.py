@@ -9,7 +9,6 @@ from PIL.Image import Image as ImageType
 from torchvision import transforms as T
 from torchvision.transforms import functional as FT
 
-from deit.models_v2 import deit_large_patch16_LS
 
 
 def img_exists(img_id):
@@ -29,9 +28,9 @@ def labelstring(onehot: np.ndarray) -> str:
     return ' '.join(labels[onehot[0]])
 
 
-from transformers import BeitFeatureExtractor, BeitForImageClassification
 class BEIT:
     def __init__(self):
+        from transformers import BeitFeatureExtractor, BeitForImageClassification
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.feature_extractor = BeitFeatureExtractor.from_pretrained('microsoft/beit-base-patch16-224-pt22k-ft22k')
         self.model = BeitForImageClassification.from_pretrained('microsoft/beit-base-patch16-224-pt22k-ft22k').to(self.device)
@@ -40,6 +39,17 @@ class BEIT:
         with torch.no_grad():
             return self.model(**inputs)['logits'].cpu().numpy()
 
+
+from skimage.feature import hog
+from skimage import data, exposure
+
+class HOG:
+    def __call__(self, images):
+        features = [
+            hog(image, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), channel_axis=-1, feature_vector=True)
+            for image in images
+        ]
+        return np.vstack(features)
 
 class CLIP:
     def __init__(self):
@@ -54,6 +64,13 @@ class CLIP:
         with torch.no_grad():
             img_embeddings = self.model.encode_image(images.to(self.device))
         return img_embeddings.cpu().numpy()
+    
+    def text_similarity(self, imgs: [ImageType], texts: [str]):
+        texts = clip.tokenize(texts).to(self.device)
+        images = torch.cat([self.preprocess(img).unsqueeze(0).to(self.device) for img in imgs], dim=0)
+        with torch.no_grad():
+            logits_per_image, logits_per_text = self.model(images, texts)
+        return logits_per_image.cpu().numpy()
 
 
 def open_img_id(img_id: str) -> ImageType:
@@ -110,6 +127,7 @@ def set_cover(universe, subsets):
 
 class DEIT:
     def __init__(self):
+        from deit.models_v2 import deit_large_patch16_LS
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.DEIT = deit_large_patch16_LS(pretrained_21k=True, pretrained=True, img_size=384).to(self.device)
         self.DEIT.eval()

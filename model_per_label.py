@@ -10,7 +10,7 @@ from sklearn.svm import SVC
 from torchvision.transforms import AutoAugment, AutoAugmentPolicy
 from xgboost import XGBClassifier
 
-from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring, BEIT, SquarePad
+from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring, BEIT, SquarePad, HOG
 
 from sklearn.preprocessing import StandardScaler
 
@@ -25,6 +25,8 @@ if __name__ == '__main__':
 
     models = []
 
+    from sklearn.linear_model import RidgeClassifier
+    from sklearn.pipeline import Pipeline
     import torch
     import random
     torch.manual_seed(123)
@@ -38,7 +40,7 @@ if __name__ == '__main__':
         T.Compose([fn.hflip, T.GaussianBlur(9)]),
         T.Compose([fn.hflip, T.RandomAdjustSharpness(0.1, p=1)]),
     ]
-    features = CLIP()
+    features = HOG()
 
     cv = generate_split(df)
     train, val = cv[0]
@@ -51,10 +53,10 @@ if __name__ == '__main__':
         iterations = diff // len(positive) + 1
         new_positives = []
 
-        # for t in transforms:
-        for _ in range(iterations):
+        for t in transforms:
+        # for _ in range(iterations):
             new_pos = positive.copy()
-            new_pos['Images'] = new_pos['Images'].apply(augmenter)
+            new_pos['Images'] = new_pos['Images'].apply(t)
             new_positives.append(new_pos)
 
         augmented = pd.concat([
@@ -73,10 +75,16 @@ if __name__ == '__main__':
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
         model = LogisticRegression(solver='saga', max_iter=400, class_weight='balanced', random_state=1234)
+        # model = RidgeClassifier(alpha=0.5, solver='saga', max_iter=400, class_weight='balanced', random_state=1234)
+        pipe = Pipeline([
+            ('sc', StandardScaler()),
+            ('model', model)
+
+        ])
         grid = GridSearchCV(
             model,
             param_grid={
-                'C':[0.7, 0.8, 0.9, 1.0],
+                # 'C':[0.7, 0.8, 0.9, 1.0],
                 # 'penalty': ['l2', 'l1'],
             },
             cv=cv,
@@ -86,6 +94,7 @@ if __name__ == '__main__':
         grid.fit(Xs, ys[:,i])
         models.append(grid.best_estimator_)
         scores.append(grid.best_score_)
+        print(grid.best_score_)
 
     testdf = pd.read_csv('test.csv')
     testlabels = []
@@ -137,7 +146,6 @@ if __name__ == '__main__':
     plt.yticks(np.arange(92), label_name);
     plt.title(str(grid.best_estimator_) + f'\nnumber of zero F-scores: {zero_fscores}')
     plt.show()
-    print('number of zero F-scores', )
 
 
 
