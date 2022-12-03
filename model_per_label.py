@@ -51,7 +51,6 @@ if __name__ == '__main__':
     cv_base = generate_split(df)
     scores = []
     for i in range(92):
-        combined = pd.concat([df, extra])
         positive = pd.concat([
             df.loc[y[:, i] == 1],
             extra.loc[y_extra[:, i] == 1],
