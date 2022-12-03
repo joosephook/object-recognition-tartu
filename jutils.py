@@ -28,6 +28,7 @@ def labelstring(onehot: np.ndarray) -> str:
     return ' '.join(labels[onehot[0]])
 
 
+from more_itertools import chunked
 class BEIT:
     def __init__(self):
         from transformers import BeitFeatureExtractor, BeitForImageClassification
@@ -35,9 +36,12 @@ class BEIT:
         self.feature_extractor = BeitFeatureExtractor.from_pretrained('microsoft/beit-base-patch16-224-pt22k-ft22k')
         self.model = BeitForImageClassification.from_pretrained('microsoft/beit-base-patch16-224-pt22k-ft22k').to(self.device)
     def __call__(self, images):
-        inputs = self.feature_extractor(images=images, return_tensors="pt").to(self.device)
-        with torch.no_grad():
-            return self.model(**inputs)['logits'].cpu().numpy()
+        features = []
+        for imgs in chunked(images, 100):
+            inputs = self.feature_extractor(images=imgs, return_tensors="pt").to(self.device)
+            with torch.no_grad():
+                features.append(self.model(**inputs)['logits'].cpu().numpy())
+        return np.vstack(features)
 
 
 from skimage.feature import hog
