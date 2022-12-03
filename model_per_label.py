@@ -28,7 +28,7 @@ from sklearn.preprocessing import StandardScaler
 
 if __name__ == '__main__':
     padder = SquarePad()
-    df = pd.read_csv('train.csv')
+    df = pd.read_csv('train_fixed.csv')
     df = df.loc[df.image_id.apply(img_exists)].reset_index()
     df['Images'] = df['image_id'].apply(open_img_id).apply(padder)
     y = np.vstack(df['labels'].apply(onehot).values)
@@ -77,15 +77,14 @@ if __name__ == '__main__':
 
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
-        model = LogisticRegression(solver='saga', class_weight='balanced', random_state=1234)
+        model = LogisticRegression(solver='liblinear', class_weight='balanced', random_state=1234)
 
         pipe = Pipeline([
             ('sc', StandardScaler()),
             ('model', model)
-
         ])
         grid = GridSearchCV(pipe,
-                            dict(model__C=[0.8, 0.9, 1.0], model__max_iter=[100, 500, 1000]),
+                            dict(model__C=[0.8, 0.9, 1.0], model__max_iter=[100, 500, 1000], model__dual=[False, True]),
                             scoring='f1',
                             n_jobs=-1, refit=True, cv=cv)
         grid.fit(Xs, ys[:, i])
@@ -106,12 +105,12 @@ if __name__ == '__main__':
                 prediction.append(
                     m.predict(x)
                 )
-            total_predictions += prediction[0]
             prediction = np.array(prediction).reshape(1, -1)
+            total_predictions += prediction[0]
             predicted_labels = labelstring(prediction.astype(bool))
 
             if len(predicted_labels) == 0:
-                testlabels.append('l1')
+                testlabels.append('l68 l77 l78 l8')
             else:
                 testlabels.append(predicted_labels)
             print(img_id,
@@ -133,4 +132,4 @@ if __name__ == '__main__':
     testdf.to_csv(os.path.join(outdir, f'{timestamp}_test.csv'), index=False)
     shutil.copy(__file__, outdir)
     print(np.mean(scores))
-    print(total_predictions)
+    print('missing predictions for labels:\n', labelsdf.loc[total_predictions == 0, 'object'])
