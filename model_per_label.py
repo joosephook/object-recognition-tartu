@@ -13,15 +13,22 @@ from sklearn.svm import SVC
 from torchvision.transforms import AutoAugment, AutoAugmentPolicy
 from xgboost import XGBClassifier
 
-from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring, BEIT, SquarePad, HOG
+from sklearn.pipeline import Pipeline
+import torch
+import random
+
+torch.manual_seed(123)
+random.seed(123)
+import torchvision.transforms as T
+import torchvision.transforms.functional as fn
+from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring, BEIT, \
+    SquarePad, HOG
 
 from sklearn.preprocessing import StandardScaler
 
 if __name__ == '__main__':
-    padder  = SquarePad()
-    # read in images
+    padder = SquarePad()
     df = pd.read_csv('train.csv')
-    # throw away missing images
     df = df.loc[df.image_id.apply(img_exists)].reset_index()
     df['Images'] = df['image_id'].apply(open_img_id).apply(padder)
     y = np.vstack(df['labels'].apply(onehot).values)
@@ -29,19 +36,11 @@ if __name__ == '__main__':
     extra = pd.read_csv('train_Kea.csv')[['image_id', 'labels']]
     extra = extra.loc[extra.image_id.apply(img_exists)].reset_index()
     extra['Images'] = extra['image_id'].apply(open_img_id).apply(padder)
-    n_total = len(extra) + len(df)
     extra = extra.iloc[~extra.index.isin(df.index)]
     y_extra = np.vstack(extra['labels'].apply(onehot).values)
 
     models = []
 
-    from sklearn.pipeline import Pipeline
-    import torch
-    import random
-    torch.manual_seed(123)
-    random.seed(123)
-    import torchvision.transforms as T
-    import torchvision.transforms.functional as fn
     transforms = [
         fn.hflip,
         T.Compose([T.GaussianBlur(9)]),
@@ -53,12 +52,10 @@ if __name__ == '__main__':
     scores = []
     for i in range(92):
         combined = pd.concat([df, extra])
-        print(len(extra.index), len(y_extra))
         positive = pd.concat([
             df.loc[y[:, i] == 1],
             extra.loc[y_extra[:, i] == 1],
-            ])
-
+        ])
 
         new_positives = []
 
@@ -72,7 +69,7 @@ if __name__ == '__main__':
             extra,
             *new_positives
         ])
-        #augmented.reset_index(inplace=True)
+        # create new cv set by including the samples we picked for validation
         val = augmented.index.isin(cv_base[0][1])
         train = ~val
         train_idx = augmented.index[train]
@@ -89,10 +86,10 @@ if __name__ == '__main__':
 
         ])
         grid = GridSearchCV(pipe,
-                            dict(model__C=[0.8,0.9,1.0], model__max_iter=[100,500,1000]),
+                            dict(model__C=[0.8, 0.9, 1.0], model__max_iter=[100, 500, 1000]),
                             scoring='f1',
-                            n_jobs=-1,refit=True, cv=cv)
-        grid.fit(Xs, ys[:,i])
+                            n_jobs=-1, refit=True, cv=cv)
+        grid.fit(Xs, ys[:, i])
         models.append(grid.best_estimator_)
         scores.append(grid.best_score_)
 
@@ -101,6 +98,7 @@ if __name__ == '__main__':
     labelsdf = pd.read_csv('labels.csv')
     for lbl, score in zip(labelsdf['object'], scores):
         print(lbl, score)
+    total_predictions = np.zeros(92)
     for img_id in testdf.image_id:
         try:
             x = features([padder(open_img_id(img_id))])
@@ -109,6 +107,7 @@ if __name__ == '__main__':
                 prediction.append(
                     m.predict(x)
                 )
+            total_predictions += prediction[0]
             prediction = np.array(prediction).reshape(1, -1)
             predicted_labels = labelstring(prediction.astype(bool))
 
@@ -135,3 +134,4 @@ if __name__ == '__main__':
     testdf.to_csv(os.path.join(outdir, f'{timestamp}_test.csv'), index=False)
     shutil.copy(__file__, outdir)
     print(np.mean(scores))
+    print(total_predictions)
