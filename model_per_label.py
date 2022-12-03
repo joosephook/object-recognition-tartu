@@ -31,6 +31,7 @@ if __name__ == '__main__':
     extra['Images'] = extra['image_id'].apply(open_img_id).apply(padder)
     n_total = len(extra) + len(df)
     extra = extra.iloc[~extra.index.isin(df.index)]
+    y_extra = np.vstack(extra['labels'].apply(onehot).values)
 
     models = []
 
@@ -48,15 +49,17 @@ if __name__ == '__main__':
     ]
     features = CLIP()
 
-    cv = generate_split(df)
-    train, val = cv[0]
-
+    cv_base = generate_split(df)
     scores = []
     for i in range(92):
-        negative = df.iloc[df.index[y[:, i] == 0]]
-        positive = df.iloc[df.index[y[:, i] == 1]]
-        diff = len(negative) - len(positive)
-        iterations = diff // len(positive) + 1
+        combined = pd.concat([df, extra])
+        print(len(extra.index), len(y_extra))
+        positive = pd.concat([
+            df.loc[y[:, i] == 1],
+            extra.loc[y_extra[:, i] == 1],
+            ])
+
+
         new_positives = []
 
         for t in transforms:
@@ -69,8 +72,8 @@ if __name__ == '__main__':
             extra,
             *new_positives
         ])
-        augmented.reset_index(inplace=True)
-        val = augmented.index.isin(cv[0][1])
+        #augmented.reset_index(inplace=True)
+        val = augmented.index.isin(cv_base[0][1])
         train = ~val
         train_idx = augmented.index[train]
         val_idx = augmented.index[val]
@@ -78,15 +81,16 @@ if __name__ == '__main__':
 
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
-        model = LogisticRegression(solver='saga', max_iter=400, class_weight='balanced', random_state=1234)
+        model = LogisticRegression(solver='saga', class_weight='balanced', random_state=1234)
+
         pipe = Pipeline([
             ('sc', StandardScaler()),
             ('model', model)
 
         ])
         grid = GridSearchCV(pipe,
-                            {},
-                            scoring='f1_macro',
+                            dict(model__C=[0.8,0.9,1.0], model__max_iter=[100,500,1000]),
+                            scoring='f1',
                             n_jobs=-1,refit=True, cv=cv)
         grid.fit(Xs, ys[:,i])
         models.append(grid.best_estimator_)
@@ -130,3 +134,4 @@ if __name__ == '__main__':
     os.mkdir(outdir)
     testdf.to_csv(os.path.join(outdir, f'{timestamp}_test.csv'), index=False)
     shutil.copy(__file__, outdir)
+    print(np.mean(scores))
