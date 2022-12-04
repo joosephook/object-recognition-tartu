@@ -50,6 +50,7 @@ if __name__ == '__main__':
     features = CLIP()
 
     scores = []
+    labelsdf = pd.read_csv('labels.csv')
     for i in range(92):
         positive = pd.concat([
             df.loc[(y[:, i] == 1).ravel()],
@@ -74,19 +75,14 @@ if __name__ == '__main__':
         half = int(len(original_positive)/2)
         val = augmented.index.isin(original_positive.index[0:half])
         train = ~val
-        cv.append((train, val))
+        cv.append((augmented.index[train], augmented.index[val]))
         val = augmented.index.isin(original_positive.index[half:])
         train = ~val
-        cv.append((train, val))
-        # for k in range(2):
-        #     val = augmented.index.isin(original_positive.index[k:k+1])
-        #     train = ~val
-        #     assert sum(val | train) == len(augmented)
-        #     cv.append((train, val))
+        cv.append((augmented.index[train], augmented.index[val]))
 
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
-        model = LogisticRegression(solver='saga', class_weight='balanced', random_state=1234)
+        model = LogisticRegression(solver='liblinear', class_weight='balanced', random_state=1234, n_jobs=-1)
 
         pipe = Pipeline([
             ('sc', StandardScaler()),
@@ -94,14 +90,14 @@ if __name__ == '__main__':
         ])
         grid = GridSearchCV(pipe,
                             dict(
-                                model__C=[0.8, 0.9, 1.0],
-                                model__max_iter=[100, 500, 1000],
+                                model__dual=[True, False],
                             ),
                             scoring='f1',
                             n_jobs=-1,
                             refit=True,
                             cv=cv)
         grid.fit(Xs, ys[:, i])
+        print(labelsdf.iloc[i], grid.cv_results_['mean_test_score'])
         models.append(grid.best_estimator_)
         scores.append(grid.best_score_)
 
