@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
-        model = LogisticRegression(solver='liblinear', class_weight='balanced', random_state=1234, n_jobs=-1)
+        model = LogisticRegression(solver='saga', class_weight='balanced', random_state=1234, n_jobs=-1)
 
         pipe = Pipeline([
             ('sc', StandardScaler()),
@@ -90,7 +90,9 @@ if __name__ == '__main__':
         ])
         grid = GridSearchCV(pipe,
                             dict(
-                                model__dual=[True, False],
+                                model__C=[0.8, 0.9, 1.0],
+                                model__max_iter=[100],
+                                model__penalty=['l1','l2'],
                             ),
                             scoring='f1',
                             n_jobs=-1,
