@@ -25,6 +25,7 @@ from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_s
     SquarePad, HOG
 
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 
 if __name__ == '__main__':
     padder = SquarePad()
@@ -48,12 +49,11 @@ if __name__ == '__main__':
     ]
     features = CLIP()
 
-    cv_base = generate_split(df)
     scores = []
     for i in range(92):
         positive = pd.concat([
-            df.loc[y[:, i] == 1],
-            extra.loc[y_extra[:, i] == 1],
+            df.loc[(y[:, i] == 1).ravel()],
+            extra.loc[(y_extra[:, i] == 0).ravel()],
         ])
 
         new_positives = []
@@ -68,12 +68,21 @@ if __name__ == '__main__':
             extra,
             *new_positives
         ])
-        # create new cv set by including the samples we picked for validation
-        val = augmented.index.isin(cv_base[0][1])
+
+        original_positive = df.loc[(y[:,i]==1).ravel()]
+        cv = []
+        half = int(len(original_positive)/2)
+        val = augmented.index.isin(original_positive.index[0:half])
         train = ~val
-        train_idx = augmented.index[train]
-        val_idx = augmented.index[val]
-        cv = [(train_idx, val_idx)]
+        cv.append((train, val))
+        val = augmented.index.isin(original_positive.index[half:])
+        train = ~val
+        cv.append((train, val))
+        # for k in range(2):
+        #     val = augmented.index.isin(original_positive.index[k:k+1])
+        #     train = ~val
+        #     assert sum(val | train) == len(augmented)
+        #     cv.append((train, val))
 
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
@@ -87,10 +96,11 @@ if __name__ == '__main__':
                             dict(
                                 model__C=[0.8, 0.9, 1.0],
                                 model__max_iter=[100, 500, 1000],
-                                model__penalty=['l2', 'l1']
                             ),
                             scoring='f1',
-                            n_jobs=-1, refit=True, cv=cv)
+                            n_jobs=-1,
+                            refit=True,
+                            cv=cv)
         grid.fit(Xs, ys[:, i])
         models.append(grid.best_estimator_)
         scores.append(grid.best_score_)
