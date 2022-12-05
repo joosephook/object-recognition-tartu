@@ -159,10 +159,13 @@ class OpenCLIP:
         if isinstance(imgs, ImageType):
             imgs = [imgs]
 
-        images = torch.cat([self.preprocess(img).unsqueeze(0).to(self.device) for img in imgs], dim=0)
+        features = []
         with torch.no_grad():
-            img_embeddings = self.model.encode_image(images.to(self.device))
-        return img_embeddings.cpu().numpy()
+            for imgs in chunked(imgs, 100):
+                images = torch.cat([self.preprocess(img).unsqueeze(0).to(self.device) for img in imgs], dim=0)
+                img_embeddings = self.model.encode_image(images.to(self.device)).cpu().numpy()
+                features.append(img_embeddings)
+        return np.vstack(features)
 
 
 def generate_split(df):

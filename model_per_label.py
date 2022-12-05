@@ -22,7 +22,7 @@ random.seed(123)
 import torchvision.transforms as T
 import torchvision.transforms.functional as fn
 from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring, BEIT, \
-    SquarePad, HOG
+    SquarePad, HOG, OpenCLIP
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         T.Compose([T.GaussianBlur(9)]),
         T.Compose([fn.hflip, T.GaussianBlur(9)]),
     ]
-    features = CLIP()
+    features = OpenCLIP()
 
     scores = []
     labelsdf = pd.read_csv('labels.csv')
