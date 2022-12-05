@@ -148,6 +148,22 @@ class DEIT:
                 features.append(self.DEIT.forward_features(self.DEIT_T(img).to(self.device)).cpu().numpy())
             return np.concatenate(features, axis=0)
 
+import open_clip
+class OpenCLIP:
+    def __init__(self):
+        self.model, _, self.preprocess = open_clip.create_model_and_transforms('ViT-L-14', pretrained='laion2b_s32b_b82k')
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model.to(self.device)
+
+    def __call__(self, imgs: [ImageType]):
+        if isinstance(imgs, ImageType):
+            imgs = [imgs]
+
+        images = torch.cat([self.preprocess(img).unsqueeze(0).to(self.device) for img in imgs], dim=0)
+        with torch.no_grad():
+            img_embeddings = self.model.encode_image(images.to(self.device))
+        return img_embeddings.cpu().numpy()
+
 
 def generate_split(df):
     y_oh = np.array([onehot(lbl) for lbl in df['labels']]).astype(int)
