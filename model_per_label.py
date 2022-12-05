@@ -12,6 +12,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from torchvision.transforms import AutoAugment, AutoAugmentPolicy
 from xgboost import XGBClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
 
 from sklearn.pipeline import Pipeline
 import torch
@@ -113,12 +115,13 @@ if __name__ == '__main__':
 
         pipe2 = Pipeline([
             ('sc', StandardScaler()),
-            ('model', RandomForestClassifier(random_state=1234, n_jobs=-1, class_weight='balanced'))
+            ('model', KNeighborsClassifier()),
         ])
         param_grid2 = [
             dict(
-                model__max_depth=[3, 6, 9],
-                model__max_features=[None],
+                model__n_neighbors=[5, 7, 9, 11, 19],
+                model__metric=['cosine', 'minkowski'],
+                model__algorithm=['brute']
             ),
         ]
         grid2 = GridSearchCV(pipe2,
@@ -131,13 +134,16 @@ if __name__ == '__main__':
 
         print(labelsdf.iloc[i], grid.cv_results_['mean_test_score'])
         print(labelsdf.iloc[i], grid2.cv_results_['mean_test_score'])
+        grids = [
+           grid, grid2
+        ]
+        grid_scores = [
+            g.best_score_ for g in grids
+        ]
+        best = np.argmax(grid_scores)
+        models.append(grids[best].best_estimator_)
+        scores.append(grids[best].best_score_)
 
-        if grid.best_score_ >= grid2.best_score_:
-            models.append(grid.best_estimator_)
-            scores.append(grid.best_score_)
-        else:
-            models.append(grid2.best_estimator_)
-            scores.append(grid2.best_score_)
 
     testdf = pd.read_csv('test.csv')
     testlabels = []
