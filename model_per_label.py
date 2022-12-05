@@ -100,7 +100,7 @@ if __name__ == '__main__':
                     model__solver=['saga'],
                     model__C=[0.8, 0.9, 1.0],
                     model__max_iter=[200],
-                    model__penalty=['l1', 'l2', 'elasticnet'],
+                    model__penalty=['l1', 'l2'],
                     ),
                 ]
         grid = GridSearchCV(pipe,
