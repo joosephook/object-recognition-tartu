@@ -110,9 +110,34 @@ if __name__ == '__main__':
                             refit=True,
                             cv=cv)
         grid.fit(Xs, ys[:, i])
+
+        pipe2 = Pipeline([
+            ('sc', StandardScaler()),
+            ('model', RandomForestClassifier(random_state=1234, n_jobs=-1, class_weight='balanced'))
+        ])
+        param_grid2 = [
+            dict(
+                model__max_depth=[3, 6, 9],
+                model__max_features=[None],
+            ),
+        ]
+        grid2 = GridSearchCV(pipe2,
+                            param_grid2,
+                            scoring='f1',
+                            n_jobs=-1,
+                            refit=True,
+                            cv=cv)
+        grid2.fit(Xs, ys[:, i])
+
         print(labelsdf.iloc[i], grid.cv_results_['mean_test_score'])
-        models.append(grid.best_estimator_)
-        scores.append(grid.best_score_)
+        print(labelsdf.iloc[i], grid2.cv_results_['mean_test_score'])
+
+        if grid.best_score_ >= grid2.best_score_:
+            models.append(grid.best_estimator_)
+            scores.append(grid.best_score_)
+        else:
+            models.append(grid2.best_estimator_)
+            scores.append(grid2.best_score_)
 
     testdf = pd.read_csv('test.csv')
     testlabels = []
