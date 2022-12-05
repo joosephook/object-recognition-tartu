@@ -37,7 +37,7 @@ if __name__ == '__main__':
     extra = pd.read_csv('train_Kea.csv')[['image_id', 'labels']]
     extra = extra.loc[extra.image_id.apply(img_exists)].reset_index()
     extra['Images'] = extra['image_id'].apply(open_img_id).apply(padder)
-    extra = extra.iloc[~extra.index.isin(df.index)]
+    extra = extra.loc[~extra.index.isin(df.index)]
     y_extra = np.vstack(extra['labels'].apply(onehot).values)
 
     models = []
