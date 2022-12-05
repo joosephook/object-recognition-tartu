@@ -22,9 +22,10 @@ random.seed(123)
 import torchvision.transforms as T
 import torchvision.transforms.functional as fn
 from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring, BEIT, \
-    SquarePad, HOG
+    SquarePad, HOG, OpenCLIP
 
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 
 if __name__ == '__main__':
     padder = SquarePad()
@@ -36,7 +37,7 @@ if __name__ == '__main__':
     extra = pd.read_csv('train_Kea.csv')[['image_id', 'labels']]
     extra = extra.loc[extra.image_id.apply(img_exists)].reset_index()
     extra['Images'] = extra['image_id'].apply(open_img_id).apply(padder)
-    extra = extra.iloc[~extra.index.isin(df.index)]
+    extra = extra.loc[~extra.index.isin(df.index)]
     y_extra = np.vstack(extra['labels'].apply(onehot).values)
 
     models = []
@@ -46,14 +47,14 @@ if __name__ == '__main__':
         T.Compose([T.GaussianBlur(9)]),
         T.Compose([fn.hflip, T.GaussianBlur(9)]),
     ]
-    features = CLIP()
+    features = OpenCLIP()
 
-    cv_base = generate_split(df)
     scores = []
+    labelsdf = pd.read_csv('labels.csv')
     for i in range(92):
         positive = pd.concat([
-            df.loc[y[:, i] == 1],
-            extra.loc[y_extra[:, i] == 1],
+            df.loc[(y[:, i] == 1).ravel()],
+            extra.loc[(y_extra[:, i] == 0).ravel()],
         ])
 
         new_positives = []
@@ -68,28 +69,75 @@ if __name__ == '__main__':
             extra,
             *new_positives
         ])
-        # create new cv set by including the samples we picked for validation
-        val = augmented.index.isin(cv_base[0][1])
+
+        original_positive = df.loc[(y[:,i]==1).ravel()]
+        cv = []
+        half = int(len(original_positive)/2)
+        val = augmented.index.isin(original_positive.index[0:half])
         train = ~val
-        train_idx = augmented.index[train]
-        val_idx = augmented.index[val]
-        cv = [(train_idx, val_idx)]
+        cv.append((augmented.index[train], augmented.index[val]))
+        val = augmented.index.isin(original_positive.index[half:])
+        train = ~val
+        cv.append((augmented.index[train], augmented.index[val]))
 
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
-        model = LogisticRegression(solver='liblinear', class_weight='balanced', random_state=1234)
+        model = LogisticRegression(class_weight='balanced', random_state=1234, n_jobs=-1)
 
         pipe = Pipeline([
             ('sc', StandardScaler()),
             ('model', model)
         ])
+        param_grid = [
+                dict(
+                    model__solver=['liblinear'],
+                    model__C=[0.8, 0.9, 1.0],
+                    model__max_iter=[200],
+                    model__penalty=['l2'],
+                    model__dual=[False, True],
+                     ),
+                dict(
+                    model__solver=['saga'],
+                    model__C=[0.8, 0.9, 1.0],
+                    model__max_iter=[200],
+                    model__penalty=['l1', 'l2'],
+                    ),
+                ]
         grid = GridSearchCV(pipe,
-                            dict(model__C=[0.8, 0.9, 1.0], model__max_iter=[100, 500, 1000], model__dual=[False, True]),
+                            param_grid,
                             scoring='f1',
-                            n_jobs=-1, refit=True, cv=cv)
+                            n_jobs=-1,
+                            refit=True,
+                            cv=cv)
         grid.fit(Xs, ys[:, i])
-        models.append(grid.best_estimator_)
-        scores.append(grid.best_score_)
+
+        pipe2 = Pipeline([
+            ('sc', StandardScaler()),
+            ('model', RandomForestClassifier(random_state=1234, n_jobs=-1, class_weight='balanced'))
+        ])
+        param_grid2 = [
+            dict(
+                model__max_depth=[3, 6, 9],
+                model__max_features=[None],
+            ),
+        ]
+        grid2 = GridSearchCV(pipe2,
+                            param_grid2,
+                            scoring='f1',
+                            n_jobs=-1,
+                            refit=True,
+                            cv=cv)
+        grid2.fit(Xs, ys[:, i])
+
+        print(labelsdf.iloc[i], grid.cv_results_['mean_test_score'])
+        print(labelsdf.iloc[i], grid2.cv_results_['mean_test_score'])
+
+        if grid.best_score_ >= grid2.best_score_:
+            models.append(grid.best_estimator_)
+            scores.append(grid.best_score_)
+        else:
+            models.append(grid2.best_estimator_)
+            scores.append(grid2.best_score_)
 
     testdf = pd.read_csv('test.csv')
     testlabels = []
