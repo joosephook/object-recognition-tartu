@@ -90,14 +90,14 @@ if __name__ == '__main__':
         ])
         param_grid = [
                 dict(
-                    model__solver='liblinear',
+                    model__solver=['liblinear'],
                     model__C=[0.8, 0.9, 1.0],
                     model__max_iter=[200],
                     model__penalty=['l2'],
                     model__dual=[False, True],
                      ),
                 dict(
-                    model__solver='saga',
+                    model__solver=['saga'],
                     model__C=[0.8, 0.9, 1.0],
                     model__max_iter=[200],
                     model__penalty=['l1', 'l2', 'elasticnet'],
