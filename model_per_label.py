@@ -104,8 +104,7 @@ if __name__ == '__main__':
                     ),
                 ]
         grid = GridSearchCV(pipe,
-                            param_grid
-                            ),
+                            param_grid,
                             scoring='f1',
                             n_jobs=-1,
                             refit=True,
