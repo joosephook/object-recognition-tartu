@@ -41,7 +41,6 @@ if __name__ == '__main__':
     extra = extra.loc[extra.image_id.apply(img_exists)].reset_index()
     extra['Images'] = extra['image_id'].apply(open_img_id).apply(padder)
     extra = extra.loc[~extra.image_id.isin(df.image_id)]
-    extra = extra.iloc[0:1]
     y_extra = np.vstack(extra['labels'].apply(onehot).values)
 
     models = []
@@ -52,6 +51,19 @@ if __name__ == '__main__':
     ]
     features = OpenCLIP()
     scores = []
+    print(df.image_id.str.contains('scraped'))
+
+    commonScaler = StandardScaler()
+    test = pd.read_csv('test.csv')
+    test = test.loc[test.image_id.apply(img_exists)].reset_index()
+    test['Images'] = test['image_id'].apply(open_img_id).apply(padder)
+
+    tartu_Xs = np.vstack((
+        features(pd.concat([df, test])['Images']),
+        features(pd.concat([df, test])['Images'].apply(fn.hflip)),
+    ))
+    commonScaler.fit(tartu_Xs)
+
     for i in range(92):
         # augment positive examples of a class
         positive = pd.concat([
@@ -80,12 +92,11 @@ if __name__ == '__main__':
         train = ~val
         cv.append((augmented.index[train], augmented.index[val]))
 
-        Xs = features(augmented['Images'].tolist())
+        Xs = commonScaler(features(augmented['Images'].tolist()))
         ys = np.vstack(augmented['labels'].apply(onehot).values)
         model = LogisticRegression()
         pipe = Pipeline([
-            ('sc', StandardScaler()),
-            ('model', model)
+            ('model', model),
         ])
         param_grid = [
                 dict(
@@ -135,7 +146,7 @@ if __name__ == '__main__':
     total_predictions = np.zeros(92)
     for img_id in testdf.image_id:
         try:
-            x = features([padder(open_img_id(img_id))])
+            x = commonScaler(features([padder(open_img_id(img_id))]))
             prediction = []
             for m in models:
                 prediction.append(
