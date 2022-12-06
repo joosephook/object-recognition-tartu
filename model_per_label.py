@@ -30,6 +30,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
 if __name__ == '__main__':
+    labelsdf = pd.read_csv('labels.csv')
     padder = SquarePad()
     df = pd.read_csv('train_fixed.csv')
     df = df.loc[df.image_id.apply(img_exists)].reset_index()
@@ -39,39 +40,35 @@ if __name__ == '__main__':
     extra = pd.read_csv('train_Kea.csv')[['image_id', 'labels']]
     extra = extra.loc[extra.image_id.apply(img_exists)].reset_index()
     extra['Images'] = extra['image_id'].apply(open_img_id).apply(padder)
-    extra = extra.loc[~extra.index.isin(df.index)]
+    extra = extra.loc[~extra.image_id.isin(df.image_id)]
     y_extra = np.vstack(extra['labels'].apply(onehot).values)
 
     models = []
-
     transforms = [
         fn.hflip,
         T.Compose([T.GaussianBlur(9)]),
         T.Compose([fn.hflip, T.GaussianBlur(9)]),
     ]
     features = OpenCLIP()
-
     scores = []
-    labelsdf = pd.read_csv('labels.csv')
     for i in range(92):
+        # augment positive examples of a class
         positive = pd.concat([
             df.loc[(y[:, i] == 1).ravel()],
             extra.loc[(y_extra[:, i] == 0).ravel()],
         ])
-
         new_positives = []
-
         for t in transforms:
             new_pos = positive.copy()
             new_pos['Images'] = new_pos['Images'].apply(t)
             new_positives.append(new_pos)
-
         augmented = pd.concat([
             df,
             extra,
             *new_positives
         ])
 
+        # create cross-validation folds
         original_positive = df.loc[(y[:,i]==1).ravel()]
         cv = []
         half = int(len(original_positive)/2)
@@ -85,7 +82,6 @@ if __name__ == '__main__':
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
         model = LogisticRegression(class_weight='balanced', random_state=1234, n_jobs=-1)
-
         pipe = Pipeline([
             ('sc', StandardScaler()),
             ('model', model)
@@ -105,37 +101,18 @@ if __name__ == '__main__':
                     model__penalty=['l1', 'l2'],
                     ),
                 ]
-        grid = GridSearchCV(pipe,
-                            param_grid,
-                            scoring='f1',
-                            n_jobs=-1,
-                            refit=True,
-                            cv=cv)
+        grid = GridSearchCV(
+            pipe,
+            param_grid,
+            scoring='f1',
+            n_jobs=-1,
+            refit=True,
+            cv=cv
+            )
         grid.fit(Xs, ys[:, i])
-
-        pipe2 = Pipeline([
-            ('sc', StandardScaler()),
-            ('model', KNeighborsClassifier()),
-        ])
-        param_grid2 = [
-            dict(
-                model__n_neighbors=[5, 7, 9, 11, 19],
-                model__metric=['cosine', 'minkowski'],
-                model__algorithm=['brute']
-            ),
-        ]
-        grid2 = GridSearchCV(pipe2,
-                            param_grid2,
-                            scoring='f1',
-                            n_jobs=-1,
-                            refit=True,
-                            cv=cv)
-        grid2.fit(Xs, ys[:, i])
-
         print(labelsdf.iloc[i], grid.cv_results_['mean_test_score'])
-        print(labelsdf.iloc[i], grid2.cv_results_['mean_test_score'])
         grids = [
-           grid, grid2
+           grid,
         ]
         grid_scores = [
             g.best_score_ for g in grids
@@ -187,3 +164,6 @@ if __name__ == '__main__':
     shutil.copy(__file__, outdir)
     print(np.mean(scores))
     print('missing predictions for labels:\n', labelsdf.loc[total_predictions == 0, 'object'])
+    import joblib
+    for i, m in enumerate(models):
+        joblib.dump(m, outdir+f'/l{i}.pkl')
