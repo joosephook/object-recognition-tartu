@@ -41,6 +41,7 @@ if __name__ == '__main__':
     extra = extra.loc[extra.image_id.apply(img_exists)].reset_index()
     extra['Images'] = extra['image_id'].apply(open_img_id).apply(padder)
     extra = extra.loc[~extra.image_id.isin(df.image_id)]
+    extra = extra.iloc[0:1]
     y_extra = np.vstack(extra['labels'].apply(onehot).values)
 
     models = []
@@ -81,7 +82,7 @@ if __name__ == '__main__':
 
         Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
-        model = LogisticRegression(class_weight='balanced', random_state=1234, n_jobs=-1)
+        model = LogisticRegression()
         pipe = Pipeline([
             ('sc', StandardScaler()),
             ('model', model)
@@ -93,12 +94,16 @@ if __name__ == '__main__':
                     model__max_iter=[200],
                     model__penalty=['l2'],
                     model__dual=[False, True],
+                    model__class_weight=['balanced'],
+                    model__random_state=[1234],
                      ),
                 dict(
                     model__solver=['saga'],
                     model__C=[0.8, 0.9, 1.0],
                     model__max_iter=[200],
                     model__penalty=['l1', 'l2'],
+                    model__class_weight=['balanced'],
+                    model__n_jobs=[-1]
                     ),
                 ]
         grid = GridSearchCV(
