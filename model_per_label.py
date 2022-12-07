@@ -5,7 +5,7 @@ from sklearn.metrics import f1_score
 
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.model_selection import GridSearchCV
 from sklearn.multioutput import ClassifierChain
 from sklearn.neighbors import KNeighborsClassifier
@@ -53,17 +53,6 @@ if __name__ == '__main__':
     scores = []
     print(df.image_id.str.contains('scraped'))
 
-    commonScaler = StandardScaler()
-    test = pd.read_csv('test.csv')
-    test = test.loc[test.image_id.apply(img_exists)].reset_index()
-    test['Images'] = test['image_id'].apply(open_img_id).apply(padder)
-
-    tartu_Xs = np.vstack((
-        features(pd.concat([df, test])['Images']),
-        features(pd.concat([df, test])['Images'].apply(fn.hflip)),
-    ))
-    commonScaler.fit(tartu_Xs)
-
     for i in range(92):
         # augment positive examples of a class
         positive = pd.concat([
@@ -92,30 +81,44 @@ if __name__ == '__main__':
         train = ~val
         cv.append((augmented.index[train], augmented.index[val]))
 
-        Xs = commonScaler(features(augmented['Images'].tolist()))
+        Xs = features(augmented['Images'].tolist())
         ys = np.vstack(augmented['labels'].apply(onehot).values)
-        model = LogisticRegression()
+        model = LogisticRegressionCV(cv=cv)
         pipe = Pipeline([
+            ('sc', StandardScaler()),
             ('model', model),
         ])
         param_grid = [
                 dict(
                     model__solver=['liblinear'],
-                    model__C=[0.8, 0.9, 1.0],
-                    model__max_iter=[200],
+                    model__Cs=[np.linspace(0.1, 1.5, 10).tolist()],
+                    model__max_iter=[400],
                     model__penalty=['l2'],
                     model__dual=[False, True],
                     model__class_weight=['balanced'],
                     model__random_state=[1234],
+                    model__n_jobs=[-1]
                      ),
                 dict(
                     model__solver=['saga'],
-                    model__C=[0.8, 0.9, 1.0],
-                    model__max_iter=[200],
+                    model__Cs=[np.linspace(0.1, 1.5, 10).tolist()],
+                    model__max_iter=[400],
                     model__penalty=['l1', 'l2'],
                     model__class_weight=['balanced'],
+                    model__random_state=[1234],
                     model__n_jobs=[-1]
                     ),
+                dict(
+                    model__solver=['saga'],
+                    model__Cs=[np.linspace(0.1, 1.5, 10).tolist()],
+                    model__l1_ratios=[np.linspace(0.1, 0.9, 10).tolist()],
+                    model__max_iter=[400],
+                    model__penalty=['elasticnet'],
+                    model__class_weight=['balanced'],
+                    model__random_state=[1234],
+                    model__n_jobs=[-1]
+                    ),
+
                 ]
         grid = GridSearchCV(
             pipe,
@@ -123,7 +126,7 @@ if __name__ == '__main__':
             scoring='f1',
             n_jobs=-1,
             refit=True,
-            cv=cv
+            cv=None
             )
         grid.fit(Xs, ys[:, i])
         print(labelsdf.iloc[i], grid.cv_results_['mean_test_score'])
@@ -146,7 +149,7 @@ if __name__ == '__main__':
     total_predictions = np.zeros(92)
     for img_id in testdf.image_id:
         try:
-            x = commonScaler(features([padder(open_img_id(img_id))]))
+            x = features([padder(open_img_id(img_id))])
             prediction = []
             for m in models:
                 prediction.append(
