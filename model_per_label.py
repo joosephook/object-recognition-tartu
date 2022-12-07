@@ -1,19 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt
-
-from sklearn.metrics import f1_score
-
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.model_selection import GridSearchCV
-from sklearn.multioutput import ClassifierChain
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from torchvision.transforms import AutoAugment, AutoAugmentPolicy
-from xgboost import XGBClassifier
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.tree import DecisionTreeClassifier
+
 
 from sklearn.pipeline import Pipeline
 import torch
@@ -23,11 +13,9 @@ torch.manual_seed(123)
 random.seed(123)
 import torchvision.transforms as T
 import torchvision.transforms.functional as fn
-from jutils import img_exists, onehot, open_img_id, DEIT, CLIP, RN50, generate_split, train_enhance, labelstring, BEIT, \
-    SquarePad, HOG, OpenCLIP
+from jutils import img_exists, onehot, open_img_id,  labelstring, SquarePad, OpenCLIP
 
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 
 if __name__ == '__main__':
     labelsdf = pd.read_csv('labels.csv')
@@ -51,38 +39,33 @@ if __name__ == '__main__':
     ]
     features = OpenCLIP()
     scores = []
-    print(df.image_id.str.contains('scraped'))
+
+    augmentations = []
+
+    for t in transforms:
+        df2 = df.copy()
+        df2['Images'] = df2['Images'].apply(t)
+        extra2 = extra.copy()
+        extra2['Images'] = extra2['Images'].apply(t)
+        augmentations.append(df2)
+        augmentations.append(extra2)
+
+    augmentations = pd.concat([df, extra, *augmentations])
+    Xs = features(augmentations['Images'])
+    ys = np.vstack(augmentations['labels'].apply(onehot).values)
 
     for i in range(92):
-        # augment positive examples of a class
-        positive = pd.concat([
-            df.loc[(y[:, i] == 1).ravel()],
-            extra.loc[(y_extra[:, i] == 0).ravel()],
-        ])
-        new_positives = []
-        for t in transforms:
-            new_pos = positive.copy()
-            new_pos['Images'] = new_pos['Images'].apply(t)
-            new_positives.append(new_pos)
-        augmented = pd.concat([
-            df,
-            extra,
-            *new_positives
-        ])
-
         # create cross-validation folds
         original_positive = df.loc[(y[:,i]==1).ravel()]
         cv = []
         half = int(len(original_positive)/2)
-        val = augmented.index.isin(original_positive.index[0:half])
+        val = augmentations.index.isin(original_positive.index[0:half])
         train = ~val
-        cv.append((augmented.index[train], augmented.index[val]))
-        val = augmented.index.isin(original_positive.index[half:])
+        cv.append((augmentations.index[train], augmentations.index[val]))
+        val = augmentations.index.isin(original_positive.index[half:])
         train = ~val
-        cv.append((augmented.index[train], augmented.index[val]))
+        cv.append((augmentations.index[train], augmentations.index[val]))
 
-        Xs = features(augmented['Images'].tolist())
-        ys = np.vstack(augmented['labels'].apply(onehot).values)
         model = LogisticRegressionCV(cv=cv)
         pipe = Pipeline([
             ('sc', StandardScaler()),
@@ -97,7 +80,7 @@ if __name__ == '__main__':
                     model__dual=[False, True],
                     model__class_weight=['balanced'],
                     model__random_state=[1234],
-                    model__n_jobs=[-1]
+                    # model__n_jobs=[-1]
                      ),
                 dict(
                     model__solver=['saga'],
@@ -106,7 +89,7 @@ if __name__ == '__main__':
                     model__penalty=['l1', 'l2'],
                     model__class_weight=['balanced'],
                     model__random_state=[1234],
-                    model__n_jobs=[-1]
+                    # model__n_jobs=[-1]
                     ),
                 dict(
                     model__solver=['saga'],
@@ -116,7 +99,7 @@ if __name__ == '__main__':
                     model__penalty=['elasticnet'],
                     model__class_weight=['balanced'],
                     model__random_state=[1234],
-                    model__n_jobs=[-1]
+                    # model__n_jobs=[-1]
                     ),
 
                 ]
